@@ -82,6 +82,14 @@ body { font-family:'Press Start 2P', monospace; }
 .room-popup-body { padding:clamp(10px,2vw,18px); font-family:Arial,sans-serif; font-size:clamp(8px,1.1vw,13px); color:#222; line-height:1.6; overflow:auto; background:#fff; }
 .room-popup-body p { margin-bottom:8px; }
 
+.corkboard-view { position:absolute; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:60; }
+.corkboard-view.open { display:flex; }
+.corkboard-view-box { background:#c0c0c0; border:2px solid; border-color:#fff #808080 #808080 #fff; box-shadow:4px 4px 0 rgba(0,0,0,.6); width:min(92vw,640px); max-height:80vh; display:flex; flex-direction:column; }
+.corkboard-view-titlebar { background:linear-gradient(to right,#000080,#1084d0); color:#fff; padding:6px 8px; display:flex; align-items:center; justify-content:space-between; font-family:'Press Start 2P',monospace; font-size:clamp(6px,1vw,9px); flex-shrink:0; }
+.corkboard-view-toolbar { display:flex; align-items:center; gap:8px; padding:6px 8px; background:#c0c0c0; border-bottom:1px solid #808080; flex-shrink:0; }
+.corkboard-view-toolbar button { font-family:Arial,sans-serif; font-size:clamp(7px,1vw,10px); background:#c0c0c0; border:1px solid; border-color:#fff #808080 #808080 #fff; padding:4px 10px; cursor:pointer; }
+.corkboard-view-body { flex:1; overflow:auto; background:#808080; }
+
 /* ============================================================ PC */
 #pc-screen { background:#000; }
 #pc-screen.active { display:flex; align-items:center; justify-content:center; }
@@ -301,6 +309,20 @@ body { font-family:'Press Start 2P', monospace; }
         <button class="win-ctrl-btn close" id="room-popup-close">✕</button>
       </div>
       <div class="room-popup-body" id="room-popup-body"></div>
+    </div>
+  </div>
+  <div class="corkboard-view" id="corkboard-view">
+    <div class="corkboard-view-box">
+      <div class="corkboard-view-titlebar">
+        <span>📌 Corkboard</span>
+        <button class="win-ctrl-btn close" id="corkboard-close">✕</button>
+      </div>
+      <div class="corkboard-view-toolbar">
+        <button id="corkboard-add-btn">📌 Pin a Photo</button>
+        <input type="file" id="corkboard-file-input" accept="image/*" multiple style="display:none"/>
+        <span style="margin-left:auto;color:#665;font-size:.9em">Pinned sketches &amp; project photos</span>
+      </div>
+      <div class="corkboard-view-body" id="corkboard-photos-content"></div>
     </div>
   </div>
 </div>
@@ -651,7 +673,8 @@ const DEFAULT_DATA = {
     { emoji:"⚙️", title:"Other CAD Projects", desc:"A collection of CAD exercises demonstrating technical proficiency — recreating provided engineering drawings and testing specific software capabilities such as advanced features and constraints.", tags:["CAD","Technical Drawing","Fusion 360"], img:"https://andrewkyleportfolio.wordpress.com/wp-content/uploads/2025/11/eng-3.png?w=554", link:"https://andrewkyleportfolio.wordpress.com/other-cad-projects/" },
     { emoji:"⏰", title:"Alarm Clock Redesign", desc:"A redesign project focused on reimagining an existing consumer product. Explored form, usability and aesthetics to produce an improved and contemporary alarm clock design.", tags:["Product Design","Redesign","CAD"], img:"https://andrewkyleportfolio.wordpress.com/wp-content/uploads/2025/11/acp-3.png?w=251", link:"https://andrewkyleportfolio.wordpress.com/alarm-clock-redesign-project/" }
   ],
-  photos:[]
+  photos:[],
+  corkboard:[]
 };
 
 function loadData(){
@@ -775,6 +798,42 @@ function renderRecycleBin(){
   </div>`;
 }
 
+function renderCorkboard(){
+  const el=document.getElementById('corkboard-photos-content');
+  if(!el) return;
+  const pinned=DATA.corkboard||[];
+  const pinnedHTML=pinned.map((p,i)=>`
+    <div class="photo-frame" style="position:relative">
+      <div class="photo-thumb" style="background:#222;padding:0;overflow:hidden">
+        <img src="${p.src}" alt="${p.caption}" style="width:100%;height:100%;object-fit:cover;display:block"/>
+      </div>
+      <div class="photo-caption">${p.caption}</div>
+      <button onclick="deleteCorkboardPhoto(${i})" style="position:absolute;top:2px;right:2px;background:#c02020;color:#fff;border:none;font-size:9px;padding:1px 4px;cursor:pointer;font-family:Arial">✕</button>
+    </div>`).join('');
+  const addBtn=`<div class="photo-frame photo-add-btn" onclick="document.getElementById('corkboard-file-input').click()" title="Pin a photo" style="cursor:pointer;opacity:.75;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+    <div class="photo-thumb" style="background:#c0c0c0;font-size:clamp(20px,2.5vw,32px);display:flex;align-items:center;justify-content:center">📌</div>
+    <div class="photo-caption">Pin Photo</div>
+  </div>`;
+  el.innerHTML=`<div class="photos-grid">${pinnedHTML}${addBtn}</div>`;
+}
+function deleteCorkboardPhoto(i){
+  DATA.corkboard.splice(i,1);
+  saveDataToStorage(DATA);
+  renderCorkboard();
+}
+function addCorkboardPhotoFromFile(file){
+  if(!file||!file.type.startsWith('image/')) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    if(!DATA.corkboard) DATA.corkboard=[];
+    const caption=file.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ');
+    DATA.corkboard.push({src:e.target.result, caption});
+    saveDataToStorage(DATA);
+    renderCorkboard();
+  };
+  reader.readAsDataURL(file);
+}
+
 function deletePhoto(i){
   DATA.photos.splice(i,1);
   saveDataToStorage(DATA);
@@ -876,6 +935,8 @@ let zoomActive=false;
 let roomDayMode=false;
 let roomLightsOn=true;
 let roomPopupOpen=false;
+let corkboardZoomTrigger=null;
+let corkboardCloseFn=null;
 
 function showRoomPopup(title,bodyHTML){
   document.getElementById('room-popup-title').textContent=title;
@@ -893,31 +954,27 @@ document.getElementById('room-popup').addEventListener('click',e=>{
   if(e.target.id==='room-popup'){ hideRoomPopup(); Snd.back(); }
 });
 
+document.getElementById('corkboard-close').addEventListener('click',e=>{ e.stopPropagation(); if(corkboardCloseFn) corkboardCloseFn(); });
+document.getElementById('corkboard-view').addEventListener('click',e=>{
+  if(e.target.id==='corkboard-view' && corkboardCloseFn) corkboardCloseFn();
+});
+document.getElementById('corkboard-add-btn').addEventListener('click',()=>document.getElementById('corkboard-file-input').click());
+document.getElementById('corkboard-file-input').addEventListener('change',function(){
+  Array.from(this.files).forEach(addCorkboardPhotoFromFile);
+  this.value='';
+});
+
 // Fractional hit-boxes (x0,y0,x1,y1 as 0-1 fractions of canvas) for interactive room props.
 const ROOM_OBJECTS=[
   { id:'window', label:'Window', hint:'Click to toggle day/night', x0:.20,y0:.06,x1:.80,y1:.33,
     onActivate(){ roomDayMode=!roomDayMode; Snd.select(); } },
   { id:'corkboard', label:'Corkboard', hint:'Click to look closer', x0:.035,y0:.07,x1:.165,y1:.30,
-    onActivate(){ showRoomPopup('📌 CORKBOARD',`
-      <p><strong>Pinned up from the workshop:</strong></p>
-      <p>☕ Coffee Machine — concept sketches</p>
-      <p>🏰 Medieval Playpark — CAD explosion views</p>
-      <p>🎰 Pinball Machine — laser-cut panel layout</p>
-      <p>⏰ Alarm Clock — redesign thumbnails</p>
-      <p style="color:#666;font-size:.9em;margin-top:10px">A rough visual log of work in progress — see the full projects on the desktop PC.</p>`); } },
+    onActivate(){ if(corkboardZoomTrigger) corkboardZoomTrigger(); } },
   { id:'certificate', label:'Certificate', hint:'Click to read', x0:.835,y0:.07,x1:.955,y1:.165,
     onActivate(){ showRoomPopup('🎓 FRAMED CERTIFICATE',`
       <p><strong>BSc Product Design Engineering</strong></p>
       <p>Manchester Metropolitan University · 2024–2027</p>
       <p>First Year Result: <strong>70%</strong></p>`); } },
-  { id:'trophy', label:'Trophy Shelf', hint:'Click to view', x0:.84,y0:.555,x1:.935,y1:.665,
-    onActivate(){ showRoomPopup('🏆 TROPHY SHELF',`
-      <p><strong>Table Tennis</strong> — Top-200 UK ranking (age group), competed internationally in China.</p>
-      <p><strong>Rugby</strong> — Captain, Southwell Rugby Club (Sept 2022 – Aug 2024). Led and motivated a squad with real-time tactical decisions.</p>`); } },
-  { id:'sketchbook', label:'Sketchbook', hint:'Click to flip through', x0:.155,y0:.585,x1:.255,y1:.665,
-    onActivate(){ showRoomPopup('📓 SKETCHBOOK',`
-      <p>Loose pages of concept sketches — quick thumbnails, mechanism doodles, and the occasional crossed-out idea that didn't make the cut.</p>
-      <p style="color:#666;font-size:.9em;margin-top:10px">Open <strong>Recycle Bin</strong> on the desktop PC for the ideas that got scrapped entirely.</p>`); } },
   { id:'ps2', label:'Games Console', hint:'Click to power on', x0:.405,y0:.695,x1:.50,y1:.775,
     onActivate(){ Snd.boot(); showRoomPopup('🎮 GAMES CONSOLE',`
       <p>Insert Disc 1: <strong>ANDREW KYLE SIMULATOR</strong></p>
@@ -982,8 +1039,8 @@ function initRoom(){
 
     // ── Zoom transform ──
     if(zoomFrac>0){
-      const s = 1 + zoomFrac*14;
-      const cx=pcBounds.cx*W, cy=pcBounds.cy*H;
+      const s = 1 + zoomFrac*zoomTarget.inc;
+      const cx=zoomTarget.cx*W, cy=zoomTarget.cy*H;
       ctx.save();
       ctx.setTransform(s,0,0,s,cx*(1-s),cy*(1-s));
     }
@@ -1226,32 +1283,6 @@ function initRoom(){
       ctx.fillStyle='rgba(220,220,220,1)';ctx.fill();ctx.globalAlpha=1;
     }
 
-    // ── SKETCHBOOK STACK ──
-    {
-      const SX2=W*.16,SY2=H*.655,SW2=W*.09,SH2=H*.012;
-      const colors=['#9098a0','#c8c0a8','#a8b8c0'];
-      colors.forEach((c,i)=>{
-        const oy=SY2-i*SH2*1.15;
-        ctx.fillStyle=c;ctx.fillRect(SX2+i*W*.004,oy-SH2,SW2-i*W*.008,SH2);
-        ctx.strokeStyle='rgba(0,0,0,.2)';ctx.lineWidth=1;ctx.strokeRect(SX2+i*W*.004,oy-SH2,SW2-i*W*.008,SH2);
-      });
-      ctx.strokeStyle='rgba(255,255,255,.3)';ctx.lineWidth=.6;
-      for(let i=0;i<5;i++){ ctx.beginPath();ctx.moveTo(SX2+SW2*.1,SY2-SH2*3.6-i*1.2);ctx.lineTo(SX2+SW2*.85,SY2-SH2*3.6-i*1.2);ctx.stroke(); }
-    }
-
-    // ── TROPHY ──
-    {
-      const TX=W*.885,TY=H*.66;
-      ctx.fillStyle='#2c2418';ctx.fillRect(TX-W*.022,TY-H*.006,W*.044,H*.012);
-      ctx.fillStyle='#e8c84a';
-      ctx.beginPath();ctx.moveTo(TX-W*.016,TY-H*.006);ctx.lineTo(TX+W*.016,TY-H*.006);ctx.lineTo(TX+W*.009,TY-H*.05);ctx.lineTo(TX-W*.009,TY-H*.05);ctx.closePath();ctx.fill();
-      ctx.beginPath();ctx.ellipse(TX,TY-H*.05,W*.013,H*.014,0,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle='#a8842a';ctx.lineWidth=1;
-      ctx.beginPath();ctx.arc(TX-W*.013,TY-H*.044,W*.009,Math.PI*.3,Math.PI*1.3);ctx.stroke();
-      ctx.beginPath();ctx.arc(TX+W*.013,TY-H*.044,W*.009,Math.PI*1.7,Math.PI*.7);ctx.stroke();
-      ctx.fillStyle='rgba(255,255,255,.35)';ctx.beginPath();ctx.ellipse(TX-W*.004,TY-H*.054,W*.004,H*.005,0,0,Math.PI*2);ctx.fill();
-    }
-
     // ── MONITOR (true one-point perspective toward scene VP) ──
     const MCX=W*.50;
     const MBY=H*.56;
@@ -1402,6 +1433,31 @@ function initRoom(){
       ctx.strokeRect(Math.round(MON_L),Math.round(MON_T),Math.round(MON_W),Math.round(crtBase-MON_T));
     }
 
+    // ── HIGHLIGHT around hovered room prop ──
+    if(hoveredRoomObj){
+      const o=hoveredRoomObj;
+      const hx=o.x0*W,hy=o.y0*H,hw=(o.x1-o.x0)*W,hh=(o.y1-o.y0)*H;
+      ctx.save();
+      ctx.shadowColor='rgba(255,210,70,.9)';ctx.shadowBlur=10;
+      ctx.strokeStyle='rgba(255,210,70,.9)';ctx.lineWidth=2;
+      ctx.strokeRect(Math.round(hx-4),Math.round(hy-4),Math.round(hw+8),Math.round(hh+8));
+      ctx.restore();
+      ctx.fillStyle='rgba(255,210,70,.07)';
+      ctx.fillRect(Math.round(hx-4),Math.round(hy-4),Math.round(hw+8),Math.round(hh+8));
+    }
+
+    // ── Persistent faint outline on every clickable room prop (helps discovery) ──
+    if(!zoomActive&&pcClickable){
+      ctx.save();
+      ctx.strokeStyle=`rgba(255,255,255,${.10+.05*Math.sin(t*.05)})`;ctx.lineWidth=1;ctx.setLineDash([4,3]);
+      ROOM_OBJECTS.forEach(o=>{
+        if(hoveredRoomObj===o) return;
+        const hx=o.x0*W,hy=o.y0*H,hw=(o.x1-o.x0)*W,hh=(o.y1-o.y0)*H;
+        ctx.strokeRect(Math.round(hx-3),Math.round(hy-3),Math.round(hw+6),Math.round(hh+6));
+      });
+      ctx.restore();
+    }
+
     // ── Ambient room darkness + screen glow ──
     ctx.fillStyle=roomLightsOn?'rgba(0,0,0,.22)':'rgba(0,0,0,.62)';
     ctx.fillRect(0,0,W,H);
@@ -1420,6 +1476,8 @@ function initRoom(){
   } // end drawRoom
 
   let zoomFrac=0, zoomRAF=null;
+  let zoomTarget={cx:.5,cy:.5,inc:14};
+  let hoveredRoomObj=null;
 
   function roomLoop(){
     if(!zoomActive) drawRoom(0);
@@ -1430,19 +1488,21 @@ function initRoom(){
 
   // ─── Mouse ───
   canvas.addEventListener('mousemove',e=>{
-    if(zoomActive||!pcClickable||roomPopupOpen) return;
+    if(zoomActive||!pcClickable||roomPopupOpen){ hoveredRoomObj=null; return; }
     const r=canvas.getBoundingClientRect();
     const mx=(e.clientX-r.left)/r.width;
     const my=(e.clientY-r.top)/r.height;
     const inScreen=pcBounds.sl&&mx>pcBounds.sl&&mx<pcBounds.sr&&my>pcBounds.st&&my<pcBounds.sb;
     hovered=!!inScreen;
     if(hovered){
+      hoveredRoomObj=null;
       canvas.style.cursor='pointer';
       document.getElementById('hud-item-name').textContent='Desktop PC';
       document.getElementById('hud-hint').textContent='Click to use';
       return;
     }
     const obj=hitRoomObject(mx,my);
+    hoveredRoomObj=obj;
     canvas.style.cursor=obj?'pointer':'default';
     document.getElementById('hud-item-name').textContent=obj?obj.label:'';
     document.getElementById('hud-hint').textContent=obj?obj.hint:'';
@@ -1477,6 +1537,7 @@ function initRoom(){
     Snd.confirm();
     document.getElementById('hud-item-name').textContent='';
     document.getElementById('hud-hint').textContent='';
+    zoomTarget={cx:pcBounds.cx,cy:pcBounds.cy,inc:14};
     const start=performance.now(),dur=900;
     function zoomStep(now){
       const p=Math.min(1,(now-start)/dur);
@@ -1487,6 +1548,39 @@ function initRoom(){
     }
     zoomRAF=requestAnimationFrame(zoomStep);
   }
+
+  function triggerCorkboardZoom(){
+    if(zoomActive||!pcClickable) return;
+    pcClickable=false; hovered=false; hoveredRoomObj=null; zoomActive=true;
+    Snd.confirm();
+    document.getElementById('hud-item-name').textContent='';
+    document.getElementById('hud-hint').textContent='';
+    zoomTarget={cx:.10,cy:.185,inc:5};
+    const start=performance.now(),dur=700;
+    function zoomStep(now){
+      const p=Math.min(1,(now-start)/dur);
+      zoomFrac=1-Math.pow(1-p,3);
+      drawRoom(zoomFrac);
+      if(p<1){ zoomRAF=requestAnimationFrame(zoomStep); }
+      else { renderCorkboard(); document.getElementById('corkboard-view').classList.add('open'); }
+    }
+    zoomRAF=requestAnimationFrame(zoomStep);
+  }
+  function closeCorkboardZoom(){
+    document.getElementById('corkboard-view').classList.remove('open');
+    Snd.back();
+    const start=performance.now(),dur=700;
+    function zoomStep(now){
+      const p=Math.min(1,(now-start)/dur);
+      zoomFrac=Math.pow(1-p,3);
+      drawRoom(zoomFrac);
+      if(p<1){ zoomRAF=requestAnimationFrame(zoomStep); }
+      else { zoomActive=false; pcClickable=true; }
+    }
+    zoomRAF=requestAnimationFrame(zoomStep);
+  }
+  corkboardZoomTrigger=triggerCorkboardZoom;
+  corkboardCloseFn=closeCorkboardZoom;
 
   canvas.addEventListener('click',e=>{
     if(roomPopupOpen) return;
