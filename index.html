@@ -75,6 +75,13 @@ body { font-family:'Press Start 2P', monospace; }
 .hud-item-name { font-size:clamp(6px,.9vw,9px); color:#fff; margin-top:4px; min-height:1em; }
 .hud-hint { font-size:clamp(4px,.7vw,7px); color:#556; margin-top:2px; min-height:1em; }
 
+.room-popup { position:absolute; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:60; }
+.room-popup.open { display:flex; }
+.room-popup-box { background:#c0c0c0; border:2px solid; border-color:#fff #808080 #808080 #fff; box-shadow:4px 4px 0 rgba(0,0,0,.6); width:min(86vw,420px); max-height:70vh; display:flex; flex-direction:column; }
+.room-popup-titlebar { background:linear-gradient(to right,#000080,#1084d0); color:#fff; padding:6px 8px; display:flex; align-items:center; justify-content:space-between; font-family:'Press Start 2P',monospace; font-size:clamp(6px,1vw,9px); flex-shrink:0; }
+.room-popup-body { padding:clamp(10px,2vw,18px); font-family:Arial,sans-serif; font-size:clamp(8px,1.1vw,13px); color:#222; line-height:1.6; overflow:auto; background:#fff; }
+.room-popup-body p { margin-bottom:8px; }
+
 /* ============================================================ PC */
 #pc-screen { background:#000; }
 #pc-screen.active { display:flex; align-items:center; justify-content:center; }
@@ -286,6 +293,15 @@ body { font-family:'Press Start 2P', monospace; }
     <div class="hud-label">▶ SELECT</div>
     <div class="hud-item-name" id="hud-item-name"></div>
     <div class="hud-hint" id="hud-hint"></div>
+  </div>
+  <div class="room-popup" id="room-popup">
+    <div class="room-popup-box">
+      <div class="room-popup-titlebar">
+        <span id="room-popup-title"></span>
+        <button class="win-ctrl-btn close" id="room-popup-close">✕</button>
+      </div>
+      <div class="room-popup-body" id="room-popup-body"></div>
+    </div>
   </div>
 </div>
 
@@ -857,6 +873,65 @@ let roomRAF=null;
 let pcClickable=false;
 let pcBounds={ cx:0.5, cy:0.42 }; // fractional center of monitor screen
 let zoomActive=false;
+let roomDayMode=false;
+let roomLightsOn=true;
+let roomPopupOpen=false;
+
+function showRoomPopup(title,bodyHTML){
+  document.getElementById('room-popup-title').textContent=title;
+  document.getElementById('room-popup-body').innerHTML=bodyHTML;
+  document.getElementById('room-popup').classList.add('open');
+  roomPopupOpen=true;
+  Snd.confirm();
+}
+function hideRoomPopup(){
+  document.getElementById('room-popup').classList.remove('open');
+  roomPopupOpen=false;
+}
+document.getElementById('room-popup-close').addEventListener('click',e=>{ e.stopPropagation(); hideRoomPopup(); Snd.back(); });
+document.getElementById('room-popup').addEventListener('click',e=>{
+  if(e.target.id==='room-popup'){ hideRoomPopup(); Snd.back(); }
+});
+
+// Fractional hit-boxes (x0,y0,x1,y1 as 0-1 fractions of canvas) for interactive room props.
+const ROOM_OBJECTS=[
+  { id:'window', label:'Window', hint:'Click to toggle day/night', x0:.20,y0:.06,x1:.80,y1:.33,
+    onActivate(){ roomDayMode=!roomDayMode; Snd.select(); } },
+  { id:'corkboard', label:'Corkboard', hint:'Click to look closer', x0:.035,y0:.07,x1:.165,y1:.30,
+    onActivate(){ showRoomPopup('📌 CORKBOARD',`
+      <p><strong>Pinned up from the workshop:</strong></p>
+      <p>☕ Coffee Machine — concept sketches</p>
+      <p>🏰 Medieval Playpark — CAD explosion views</p>
+      <p>🎰 Pinball Machine — laser-cut panel layout</p>
+      <p>⏰ Alarm Clock — redesign thumbnails</p>
+      <p style="color:#666;font-size:.9em;margin-top:10px">A rough visual log of work in progress — see the full projects on the desktop PC.</p>`); } },
+  { id:'certificate', label:'Certificate', hint:'Click to read', x0:.835,y0:.07,x1:.955,y1:.165,
+    onActivate(){ showRoomPopup('🎓 FRAMED CERTIFICATE',`
+      <p><strong>BSc Product Design Engineering</strong></p>
+      <p>Manchester Metropolitan University · 2024–2027</p>
+      <p>First Year Result: <strong>70%</strong></p>`); } },
+  { id:'trophy', label:'Trophy Shelf', hint:'Click to view', x0:.84,y0:.555,x1:.935,y1:.665,
+    onActivate(){ showRoomPopup('🏆 TROPHY SHELF',`
+      <p><strong>Table Tennis</strong> — Top-200 UK ranking (age group), competed internationally in China.</p>
+      <p><strong>Rugby</strong> — Captain, Southwell Rugby Club (Sept 2022 – Aug 2024). Led and motivated a squad with real-time tactical decisions.</p>`); } },
+  { id:'sketchbook', label:'Sketchbook', hint:'Click to flip through', x0:.155,y0:.585,x1:.255,y1:.665,
+    onActivate(){ showRoomPopup('📓 SKETCHBOOK',`
+      <p>Loose pages of concept sketches — quick thumbnails, mechanism doodles, and the occasional crossed-out idea that didn't make the cut.</p>
+      <p style="color:#666;font-size:.9em;margin-top:10px">Open <strong>Recycle Bin</strong> on the desktop PC for the ideas that got scrapped entirely.</p>`); } },
+  { id:'ps2', label:'Games Console', hint:'Click to power on', x0:.405,y0:.695,x1:.50,y1:.775,
+    onActivate(){ Snd.boot(); showRoomPopup('🎮 GAMES CONSOLE',`
+      <p>Insert Disc 1: <strong>ANDREW KYLE SIMULATOR</strong></p>
+      <p style="color:#666;font-size:.9em;margin-top:10px">(The real games are on the desktop — try Pong.exe or Snake.exe.)</p>`); } },
+  { id:'lightswitch', label:'Light Switch', hint:'Click to toggle lights', x0:.012,y0:.42,x1:.034,y1:.495,
+    onActivate(){ roomLightsOn=!roomLightsOn; Snd.select(); } },
+];
+function hitRoomObject(mx,my){
+  for(let i=ROOM_OBJECTS.length-1;i>=0;i--){
+    const o=ROOM_OBJECTS[i];
+    if(mx>o.x0&&mx<o.x1&&my>o.y0&&my<o.y1) return o;
+  }
+  return null;
+}
 
 // Polygon fill helper
 function poly(ctx, pts, fill, stroke, sw=1){
@@ -953,55 +1028,80 @@ function initRoom(){
 
     // Outer frame
     ctx.fillStyle='#2c1e10';ctx.fillRect(WX,WY,WW,WH);
-    // Glass area - night sky base
-    ctx.fillStyle='#020610';ctx.fillRect(GX,GY,GW,GH);
-    // Sky gradient
-    const skyG=ctx.createLinearGradient(0,GY,0,GY+GH);
-    skyG.addColorStop(0,'rgba(2,4,18,.95)');
-    skyG.addColorStop(.65,'rgba(8,4,18,.8)');
-    skyG.addColorStop(1,'rgba(22,8,4,.55)');
-    ctx.fillStyle=skyG;ctx.fillRect(GX,GY,GW,GH);
+    // Glass area base
+    ctx.fillStyle=roomDayMode?'#3a7bb0':'#020610';ctx.fillRect(GX,GY,GW,GH);
 
-    // Stars
     ctx.save();ctx.beginPath();ctx.rect(GX,GY,GW,GH);ctx.clip();
-    [.06,.14,.26,.37,.48,.57,.65,.73,.82,.90,.97,.02,.19,.33,.44,.61,.77,.88].forEach((sx,i)=>{
-      const starX=GX+sx*GW,starY=GY+((sx*GH*1.6+i*22)%(GH*.52));
-      const br=.3+.7*Math.sin(t*.014+i*1.5);
-      ctx.beginPath();ctx.arc(starX,starY,.7+(i%3)*.4,0,Math.PI*2);
-      ctx.fillStyle=`rgba(220,232,255,${br*.72})`;ctx.fill();
-    });
-    // Moon
-    const MX=GX+GW*.74,MY=GY+GH*.17,MR=GW*.04;
-    const moonG=ctx.createRadialGradient(MX,MY,0,MX,MY,MR);
-    moonG.addColorStop(0,'rgba(248,248,205,1)');moonG.addColorStop(.6,'rgba(220,220,170,.9)');moonG.addColorStop(1,'transparent');
-    ctx.fillStyle=moonG;ctx.beginPath();ctx.arc(MX,MY,MR*1.3,0,Math.PI*2);ctx.fill();
-    // Moon halo
-    const mhalo=ctx.createRadialGradient(MX,MY,MR,MX,MY,MR*3.2);
-    mhalo.addColorStop(0,'rgba(210,220,160,.07)');mhalo.addColorStop(1,'transparent');
-    ctx.fillStyle=mhalo;ctx.beginPath();ctx.arc(MX,MY,MR*3.2,0,Math.PI*2);ctx.fill();
-    // City buildings
-    BUILDINGS.forEach((b,bi)=>{
-      const bx=GX+b.x*GW,bw=b.w*GW,bh=b.h*GH,by=GY+GH-bh;
-      ctx.fillStyle='#07061a';ctx.fillRect(Math.round(bx),Math.round(by),Math.round(bw),Math.round(bh));
-      ctx.fillStyle='#0f0e22';ctx.fillRect(Math.round(bx),Math.round(by),Math.round(bw),2);
-      const rows=Math.max(2,Math.floor(bh/9)),cols=Math.max(1,Math.floor(bw/7));
-      b.windows.forEach((w,wi)=>{
-        if(wi>=rows*cols)return;
-        if(Math.random()<.0005)w.lit=!w.lit;
-        if(!w.lit)return;
-        const wr=Math.floor(wi/cols),wc=wi%cols;
-        const wx2=bx+wc*(bw/cols)+bw/(cols*3.5),wy2=by+wr*(bh/rows)+bh/(rows*2.5);
-        const ww2=Math.max(1.5,bw/cols*.44),wh2=Math.max(1.5,bh/rows*.4);
-        const warm=Math.random()>.62;
-        ctx.fillStyle=warm?`rgba(255,212,75,${.62+.28*Math.sin(t*.02+wi)})`:`rgba(238,244,198,${.52+.28*Math.sin(t*.03+wi)})`;
-        ctx.fillRect(Math.round(wx2),Math.round(wy2),Math.round(ww2),Math.round(wh2));
+    if(roomDayMode){
+      // ── DAYTIME SKY ──
+      const daySky=ctx.createLinearGradient(0,GY,0,GY+GH);
+      daySky.addColorStop(0,'#4a9cd6');daySky.addColorStop(.6,'#a8d8ec');daySky.addColorStop(1,'#f0d8a0');
+      ctx.fillStyle=daySky;ctx.fillRect(GX,GY,GW,GH);
+      // Sun
+      const SX=GX+GW*.74,SY=GY+GH*.20,SR=GW*.05;
+      const sunG=ctx.createRadialGradient(SX,SY,0,SX,SY,SR*2.6);
+      sunG.addColorStop(0,'rgba(255,250,210,1)');sunG.addColorStop(.4,'rgba(255,230,140,.85)');sunG.addColorStop(1,'transparent');
+      ctx.fillStyle=sunG;ctx.beginPath();ctx.arc(SX,SY,SR*2.6,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff8de';ctx.beginPath();ctx.arc(SX,SY,SR,0,Math.PI*2);ctx.fill();
+      // Soft clouds
+      [.18,.42,.62].forEach((cx,i)=>{
+        const cyy=GY+GH*(.32+i*.1), cww=GW*.16;
+        ctx.fillStyle='rgba(255,255,255,.55)';
+        ctx.beginPath();ctx.ellipse(GX+cx*GW,cyy,cww,cww*.36,0,0,Math.PI*2);ctx.fill();
       });
-      if(bi%4===0){ctx.strokeStyle='#181438';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(bx+bw*.5,by);ctx.lineTo(bx+bw*.5,by-GH*.052);ctx.stroke();}
-    });
-    // Horizon glow
-    const horizG=ctx.createLinearGradient(0,GY+GH*.5,0,GY+GH);
-    horizG.addColorStop(0,'transparent');horizG.addColorStop(1,'rgba(90,28,110,.32)');
-    ctx.fillStyle=horizG;ctx.fillRect(GX,GY+GH*.5,GW,GH*.5);
+      // City buildings — daylight, flat & unlit
+      BUILDINGS.forEach((b)=>{
+        const bx=GX+b.x*GW,bw=b.w*GW,bh=b.h*GH,by=GY+GH-bh;
+        ctx.fillStyle='#6f86a0';ctx.fillRect(Math.round(bx),Math.round(by),Math.round(bw),Math.round(bh));
+        ctx.fillStyle='#7f96b0';ctx.fillRect(Math.round(bx),Math.round(by),Math.round(bw),2);
+      });
+    } else {
+      // ── NIGHT SKY ──
+      const skyG=ctx.createLinearGradient(0,GY,0,GY+GH);
+      skyG.addColorStop(0,'rgba(2,4,18,.95)');
+      skyG.addColorStop(.65,'rgba(8,4,18,.8)');
+      skyG.addColorStop(1,'rgba(22,8,4,.55)');
+      ctx.fillStyle=skyG;ctx.fillRect(GX,GY,GW,GH);
+      // Stars
+      [.06,.14,.26,.37,.48,.57,.65,.73,.82,.90,.97,.02,.19,.33,.44,.61,.77,.88].forEach((sx,i)=>{
+        const starX=GX+sx*GW,starY=GY+((sx*GH*1.6+i*22)%(GH*.52));
+        const br=.3+.7*Math.sin(t*.014+i*1.5);
+        ctx.beginPath();ctx.arc(starX,starY,.7+(i%3)*.4,0,Math.PI*2);
+        ctx.fillStyle=`rgba(220,232,255,${br*.72})`;ctx.fill();
+      });
+      // Moon
+      const MX=GX+GW*.74,MY=GY+GH*.17,MR=GW*.04;
+      const moonG=ctx.createRadialGradient(MX,MY,0,MX,MY,MR);
+      moonG.addColorStop(0,'rgba(248,248,205,1)');moonG.addColorStop(.6,'rgba(220,220,170,.9)');moonG.addColorStop(1,'transparent');
+      ctx.fillStyle=moonG;ctx.beginPath();ctx.arc(MX,MY,MR*1.3,0,Math.PI*2);ctx.fill();
+      // Moon halo
+      const mhalo=ctx.createRadialGradient(MX,MY,MR,MX,MY,MR*3.2);
+      mhalo.addColorStop(0,'rgba(210,220,160,.07)');mhalo.addColorStop(1,'transparent');
+      ctx.fillStyle=mhalo;ctx.beginPath();ctx.arc(MX,MY,MR*3.2,0,Math.PI*2);ctx.fill();
+      // City buildings
+      BUILDINGS.forEach((b,bi)=>{
+        const bx=GX+b.x*GW,bw=b.w*GW,bh=b.h*GH,by=GY+GH-bh;
+        ctx.fillStyle='#07061a';ctx.fillRect(Math.round(bx),Math.round(by),Math.round(bw),Math.round(bh));
+        ctx.fillStyle='#0f0e22';ctx.fillRect(Math.round(bx),Math.round(by),Math.round(bw),2);
+        const rows=Math.max(2,Math.floor(bh/9)),cols=Math.max(1,Math.floor(bw/7));
+        b.windows.forEach((w,wi)=>{
+          if(wi>=rows*cols)return;
+          if(Math.random()<.0005)w.lit=!w.lit;
+          if(!w.lit)return;
+          const wr=Math.floor(wi/cols),wc=wi%cols;
+          const wx2=bx+wc*(bw/cols)+bw/(cols*3.5),wy2=by+wr*(bh/rows)+bh/(rows*2.5);
+          const ww2=Math.max(1.5,bw/cols*.44),wh2=Math.max(1.5,bh/rows*.4);
+          const warm=Math.random()>.62;
+          ctx.fillStyle=warm?`rgba(255,212,75,${.62+.28*Math.sin(t*.02+wi)})`:`rgba(238,244,198,${.52+.28*Math.sin(t*.03+wi)})`;
+          ctx.fillRect(Math.round(wx2),Math.round(wy2),Math.round(ww2),Math.round(wh2));
+        });
+        if(bi%4===0){ctx.strokeStyle='#181438';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(bx+bw*.5,by);ctx.lineTo(bx+bw*.5,by-GH*.052);ctx.stroke();}
+      });
+      // Horizon glow
+      const horizG=ctx.createLinearGradient(0,GY+GH*.5,0,GY+GH);
+      horizG.addColorStop(0,'transparent');horizG.addColorStop(1,'rgba(90,28,110,.32)');
+      ctx.fillStyle=horizG;ctx.fillRect(GX,GY+GH*.5,GW,GH*.5);
+    }
     ctx.restore();
 
     // Window frame crossbars + border
@@ -1012,6 +1112,40 @@ function initRoom(){
     ctx.strokeStyle='#604830';ctx.lineWidth=2;ctx.strokeRect(GX-2,GY-2,GW+4,GH+4);
     // Window sill
     poly(ctx,[[WX-W*.01,WY+WH],[WX+WW+W*.01,WY+WH],[WX+WW+W*.005,WY+WH+H*.014],[WX-W*.005,WY+WH+H*.014]],'#4a3420');
+
+    // ── CORKBOARD (left of window) ──
+    {
+      const CX=W*.035,CY=H*.07,CW=W*.13,CH=H*.23;
+      ctx.fillStyle='#7a5a32';ctx.fillRect(CX-W*.006,CY-H*.006,CW+W*.012,CH+H*.012);
+      ctx.fillStyle='#c2a876';ctx.fillRect(CX,CY,CW,CH);
+      ctx.fillStyle='rgba(0,0,0,.06)';
+      for(let i=0;i<40;i++){ ctx.fillRect(CX+Math.random()*CW,CY+Math.random()*CH,1.5,1.5); }
+      const pins=[
+        {x:.18,y:.22,c:'#e8d9b0'},{x:.55,y:.16,c:'#cfe0e8'},
+        {x:.30,y:.55,c:'#e0c8c8'},{x:.72,y:.50,c:'#d8e0c0'},
+        {x:.50,y:.78,c:'#e8d9b0'}
+      ];
+      pins.forEach(p=>{
+        const px=CX+p.x*CW,py=CY+p.y*CH,pw=CW*.22,ph=CH*.16;
+        ctx.save();ctx.translate(px,py);ctx.rotate((p.x-0.5)*.25);
+        ctx.fillStyle='#000';ctx.globalAlpha=.18;ctx.fillRect(-pw/2+2,-ph/2+3,pw,ph);
+        ctx.globalAlpha=1;ctx.fillStyle=p.c;ctx.fillRect(-pw/2,-ph/2,pw,ph);
+        ctx.strokeStyle='rgba(0,0,0,.25)';ctx.lineWidth=1;ctx.strokeRect(-pw/2,-ph/2,pw,ph);
+        ctx.fillStyle='#c02020';ctx.beginPath();ctx.arc(0,-ph/2+2,1.6,0,Math.PI*2);ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    // ── FRAMED CERTIFICATE (right of window) ──
+    {
+      const FX=W*.835,FY=H*.07,FW=W*.12,FH=H*.095;
+      ctx.fillStyle='#bca06a';ctx.fillRect(FX,FY,FW,FH);
+      ctx.fillStyle='#fdfaf0';ctx.fillRect(FX+W*.006,FY+H*.008,FW-W*.012,FH-H*.016);
+      ctx.strokeStyle='rgba(180,150,40,.6)';ctx.lineWidth=1;ctx.strokeRect(FX+W*.011,FY+H*.014,FW-W*.022,FH-H*.028);
+      ctx.fillStyle='#8a7030';ctx.font=`${Math.max(3,Math.floor(FW*.07))}px Arial`;ctx.textAlign='center';
+      ctx.fillText('B.Sc',FX+FW/2,FY+FH*.42);
+      ctx.fillText('MMU',FX+FW/2,FY+FH*.68);
+    }
 
     // ── DESK (perspective trapezoid) ──
     const DBY=H*.48; // back edge y
@@ -1055,6 +1189,26 @@ function initRoom(){
       poly(ctx,[[lx+lw,ly+DTHK_F],[lx+lw+W*.008,ly+DTHK_F-H*.004],[lx+lw+W*.008,ly+DTHK_F-H*.004+lh],[lx+lw,ly+DTHK_F+lh]],'#100802');
     });
 
+    // ── GAMES CONSOLE (on the floor, in front of desk) ──
+    {
+      const PX=W*.405,PY=H*.695,PW2=W*.095,PH2=H*.08;
+      ctx.fillStyle='#16161c';ctx.fillRect(PX,PY,PW2,PH2);
+      ctx.fillStyle='#22222a';ctx.fillRect(PX,PY,PW2,PH2*.3);
+      ctx.fillStyle='#0a0a10';ctx.fillRect(PX+PW2*.1,PY+PH2*.42,PW2*.8,PH2*.18);
+      ctx.fillStyle=(roomLightsOn?'rgba(60,160,255,.9)':'rgba(60,160,255,.5)');
+      ctx.beginPath();ctx.arc(PX+PW2*.14,PY+PH2*.78,Math.max(1,PW2*.025),0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#444';ctx.fillRect(PX+PW2*.3,PY+PH2*.7,PW2*.45,PH2*.06);
+    }
+
+    // ── LIGHT SWITCH (low on left side wall) ──
+    {
+      const LX=W*.012,LY=H*.42,LW2=W*.022,LH2=H*.075;
+      ctx.fillStyle='#d8d4c8';ctx.fillRect(LX,LY,LW2,LH2);
+      ctx.strokeStyle='rgba(0,0,0,.3)';ctx.lineWidth=1;ctx.strokeRect(LX,LY,LW2,LH2);
+      ctx.fillStyle=roomLightsOn?'#e8e0c0':'#888';
+      ctx.fillRect(LX+LW2*.2,LY+LH2*(roomLightsOn?.12:.55),LW2*.6,LH2*.33);
+    }
+
     // ── COFFEE MUG ──
     const MUG_X=W*.10,MUG_Y=DFY-H*.002;
     const mugW=W*.028,mugH=H*.044;
@@ -1070,6 +1224,32 @@ function initRoom(){
       ctx.globalAlpha=Math.max(0,.26*Math.sin(phase+1));
       ctx.beginPath();ctx.arc(sx+Math.sin(phase)*W*.005,sy,W*.0038,0,Math.PI*2);
       ctx.fillStyle='rgba(220,220,220,1)';ctx.fill();ctx.globalAlpha=1;
+    }
+
+    // ── SKETCHBOOK STACK ──
+    {
+      const SX2=W*.16,SY2=H*.655,SW2=W*.09,SH2=H*.012;
+      const colors=['#9098a0','#c8c0a8','#a8b8c0'];
+      colors.forEach((c,i)=>{
+        const oy=SY2-i*SH2*1.15;
+        ctx.fillStyle=c;ctx.fillRect(SX2+i*W*.004,oy-SH2,SW2-i*W*.008,SH2);
+        ctx.strokeStyle='rgba(0,0,0,.2)';ctx.lineWidth=1;ctx.strokeRect(SX2+i*W*.004,oy-SH2,SW2-i*W*.008,SH2);
+      });
+      ctx.strokeStyle='rgba(255,255,255,.3)';ctx.lineWidth=.6;
+      for(let i=0;i<5;i++){ ctx.beginPath();ctx.moveTo(SX2+SW2*.1,SY2-SH2*3.6-i*1.2);ctx.lineTo(SX2+SW2*.85,SY2-SH2*3.6-i*1.2);ctx.stroke(); }
+    }
+
+    // ── TROPHY ──
+    {
+      const TX=W*.885,TY=H*.66;
+      ctx.fillStyle='#2c2418';ctx.fillRect(TX-W*.022,TY-H*.006,W*.044,H*.012);
+      ctx.fillStyle='#e8c84a';
+      ctx.beginPath();ctx.moveTo(TX-W*.016,TY-H*.006);ctx.lineTo(TX+W*.016,TY-H*.006);ctx.lineTo(TX+W*.009,TY-H*.05);ctx.lineTo(TX-W*.009,TY-H*.05);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.ellipse(TX,TY-H*.05,W*.013,H*.014,0,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#a8842a';ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(TX-W*.013,TY-H*.044,W*.009,Math.PI*.3,Math.PI*1.3);ctx.stroke();
+      ctx.beginPath();ctx.arc(TX+W*.013,TY-H*.044,W*.009,Math.PI*1.7,Math.PI*.7);ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,.35)';ctx.beginPath();ctx.ellipse(TX-W*.004,TY-H*.054,W*.004,H*.005,0,0,Math.PI*2);ctx.fill();
     }
 
     // ── MONITOR (true one-point perspective toward scene VP) ──
@@ -1223,7 +1403,7 @@ function initRoom(){
     }
 
     // ── Ambient room darkness + screen glow ──
-    ctx.fillStyle='rgba(0,0,0,.22)';
+    ctx.fillStyle=roomLightsOn?'rgba(0,0,0,.22)':'rgba(0,0,0,.62)';
     ctx.fillRect(0,0,W,H);
 
     ctx.globalCompositeOperation='lighter';
@@ -1250,20 +1430,27 @@ function initRoom(){
 
   // ─── Mouse ───
   canvas.addEventListener('mousemove',e=>{
-    if(zoomActive||!pcClickable) return;
+    if(zoomActive||!pcClickable||roomPopupOpen) return;
     const r=canvas.getBoundingClientRect();
     const mx=(e.clientX-r.left)/r.width;
     const my=(e.clientY-r.top)/r.height;
     const inScreen=pcBounds.sl&&mx>pcBounds.sl&&mx<pcBounds.sr&&my>pcBounds.st&&my<pcBounds.sb;
     hovered=!!inScreen;
-    canvas.style.cursor=hovered?'pointer':'default';
-    document.getElementById('hud-item-name').textContent=hovered?'Desktop PC':'';
-    document.getElementById('hud-hint').textContent=hovered?'Click to use':'';
+    if(hovered){
+      canvas.style.cursor='pointer';
+      document.getElementById('hud-item-name').textContent='Desktop PC';
+      document.getElementById('hud-hint').textContent='Click to use';
+      return;
+    }
+    const obj=hitRoomObject(mx,my);
+    canvas.style.cursor=obj?'pointer':'default';
+    document.getElementById('hud-item-name').textContent=obj?obj.label:'';
+    document.getElementById('hud-hint').textContent=obj?obj.hint:'';
   });
 
-  // ─── Touch (mobile tap on monitor) ───
+  // ─── Touch (mobile tap on monitor / room props) ───
   canvas.addEventListener('touchend',e=>{
-    if(zoomActive||!pcClickable) return;
+    if(zoomActive||!pcClickable||roomPopupOpen) return;
     e.preventDefault();
     const t=e.changedTouches[0];
     const r=canvas.getBoundingClientRect();
@@ -1275,11 +1462,13 @@ function initRoom(){
       document.getElementById('hud-hint').textContent='Tap to use';
       hovered=true;
       triggerPCZoom();
-    } else {
-      // Tap anywhere on mobile triggers PC too (easier UX)
-      hovered=true;
-      triggerPCZoom();
+      return;
     }
+    const obj=hitRoomObject(mx,my);
+    if(obj){ obj.onActivate(); return; }
+    // Tap anywhere else on mobile triggers PC too (easier UX)
+    hovered=true;
+    triggerPCZoom();
   },{passive:false});
 
   function triggerPCZoom(){
@@ -1300,6 +1489,13 @@ function initRoom(){
   }
 
   canvas.addEventListener('click',e=>{
+    if(roomPopupOpen) return;
+    if(!hovered){
+      const r=canvas.getBoundingClientRect();
+      const mx=(e.clientX-r.left)/r.width, my=(e.clientY-r.top)/r.height;
+      const obj=hitRoomObject(mx,my);
+      if(obj){ obj.onActivate(); return; }
+    }
     triggerPCZoom();
   });
 }
