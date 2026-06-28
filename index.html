@@ -1037,12 +1037,14 @@ function initRoom(){
   function drawRoom(zoomFrac=0){
     ctx.clearRect(0,0,W,H);
 
-    // ── Zoom transform ──
+    // ── Zoom transform ── (anchor point slides to canvas centre as it zooms in)
     if(zoomFrac>0){
       const s = 1 + zoomFrac*zoomTarget.inc;
-      const cx=zoomTarget.cx*W, cy=zoomTarget.cy*H;
+      const px=zoomTarget.cx*W, py=zoomTarget.cy*H;
+      const qx=px+zoomFrac*(W/2-px), qy=py+zoomFrac*(H/2-py);
+      const tx=qx-s*px, ty=qy-s*py;
       ctx.save();
-      ctx.setTransform(s,0,0,s,cx*(1-s),cy*(1-s));
+      ctx.setTransform(s,0,0,s,tx,ty);
     }
 
     // ── Vanishing point (centre of back wall) ──
