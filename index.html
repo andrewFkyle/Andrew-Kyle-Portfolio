@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Portfolio</title>
+<title>Andrew Kyle — Portfolio</title>
+<meta name="description" content="Andrew Kyle — Product Design Engineering student at Manchester Metropolitan University. A retro PS2-styled interactive portfolio.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://andrewkyleportfolio.wordpress.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
 /* ============================================================ BASE */
@@ -137,6 +141,7 @@ body { font-family:'Press Start 2P', monospace; }
 
 .win-content { flex:1; overflow:auto; background:#fff; padding:clamp(8px,1.5vw,16px); font-family:'Courier New',monospace; font-size:clamp(8px,1.2vw,13px); line-height:1.6; color:#000; }
 .cv-content h2 { font-family:Arial,sans-serif; font-size:clamp(10px,1.6vw,18px); border-bottom:2px solid #000080; padding-bottom:4px; margin:12px 0 6px; color:#000080; }
+.panel-h2 { font-family:Arial,sans-serif; font-size:clamp(10px,1.6vw,18px); border-bottom:2px solid #000080; padding-bottom:4px; margin:0 0 14px; color:#000080; }
 .cv-content p,.cv-content li { font-family:Arial,sans-serif; font-size:clamp(7px,1.1vw,12px); margin:3px 0; }
 .cv-content ul { padding-left:16px; }
 
@@ -704,7 +709,7 @@ function renderProjects(){
   el.innerHTML=DATA.projects.map(p=>`
     <div class="project-card">
       <div class="project-card-header">${p.emoji} ${p.title}</div>
-      ${p.img?`<div class="project-card-img"><img src="${p.img}" alt="${p.title}" onerror="this.parentElement.style.display='none'"/></div>`:''}
+      ${p.img?`<div class="project-card-img"><img src="${p.img}" alt="${p.title}" loading="lazy" decoding="async" onerror="this.parentElement.style.display='none'"/></div>`:''}
       <div class="project-card-body">
         ${p.desc}<br><br>
         ${p.tags.map(t=>`<span class="project-tag">${t}</span>`).join('')}
@@ -720,7 +725,7 @@ function renderPhotos(){
   const uploadedHTML = userPhotos.map((p,i)=>`
     <div class="photo-frame" style="position:relative">
       <div class="photo-thumb" style="background:#222;padding:0;overflow:hidden">
-        <img src="${p.src}" alt="${p.caption}" style="width:100%;height:100%;object-fit:cover;display:block"/>
+        <img src="${p.src}" alt="${p.caption}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block"/>
       </div>
       <div class="photo-caption">${p.caption}</div>
       <button onclick="deletePhoto(${i})" style="position:absolute;top:2px;right:2px;background:#c02020;color:#fff;border:none;font-size:9px;padding:1px 4px;cursor:pointer;font-family:Arial">✕</button>
@@ -736,8 +741,8 @@ function renderSkills(){
   const el=document.getElementById('skills-content');
   if(!el) return;
   const bars=DATA.cv.skillBars||[];
-  el.innerHTML=`<div style="padding:14px 18px">
-    <h2 style="font-size:clamp(11px,1.6vw,16px);color:#000080;border-bottom:2px solid #000080;padding-bottom:4px;margin-bottom:14px">Skill Levels</h2>
+  el.innerHTML=`<div>
+    <h2 class="panel-h2">Skill Levels</h2>
     ${bars.map(b=>`
       <div style="margin-bottom:12px">
         <div style="display:flex;justify-content:space-between;font-size:clamp(8px,1vw,11px);margin-bottom:3px"><span>${b.name}</span><span>${b.level}%</span></div>
@@ -751,9 +756,9 @@ function renderSkills(){
 function renderContact(){
   const el=document.getElementById('contact-content');
   if(!el) return;
-  el.innerHTML=`<div style="padding:18px;text-align:center">
+  el.innerHTML=`<div style="text-align:center">
     <div style="font-size:clamp(28px,4vw,48px);margin-bottom:10px">✉️</div>
-    <h2 style="font-size:clamp(11px,1.6vw,16px);color:#000080;margin-bottom:14px">Get In Touch</h2>
+    <h2 class="panel-h2" style="display:inline-block">Get In Touch</h2>
     <p style="font-size:clamp(8px,1vw,11px);margin-bottom:16px;color:#444">Feel free to reach out about my work, collaborations, or opportunities.</p>
     <div style="display:flex;flex-direction:column;gap:10px;align-items:center">
       <a href="mailto:andrewfkyle17@gmail.com" style="background:#000080;color:#fff;padding:8px 18px;text-decoration:none;font-size:clamp(8px,1vw,11px);border-radius:3px">📧 andrewfkyle17@gmail.com</a>
@@ -765,7 +770,7 @@ function renderContact(){
 function renderMyComputer(){
   const el=document.getElementById('mycomputer-content');
   if(!el) return;
-  el.innerHTML=`<div style="padding:16px">
+  el.innerHTML=`<div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
       <span style="font-size:32px">🖥️</span>
       <div><div style="font-weight:bold;font-size:clamp(9px,1.1vw,13px)">ANDREW KYLE PORTFOLIO SYSTEM</div><div style="font-size:clamp(7px,.9vw,10px);color:#666">Designed &amp; built by Andrew Kyle</div></div>
@@ -791,7 +796,7 @@ function renderRecycleBin(){
     "Pinball Layout — Scrapped Idea.dwg",
     "Alarm Clock — First Pass (too plain).png"
   ];
-  el.innerHTML=`<div style="padding:14px 18px">
+  el.innerHTML=`<div>
     <p style="font-size:clamp(7px,.9vw,10px);color:#666;margin-bottom:10px">Early concepts and discarded iterations from the design process:</p>
     ${items.map(i=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #eee;font-size:clamp(8px,1vw,11px)"><span>🗑️</span><span style="color:#777;text-decoration:line-through">${i}</span></div>`).join('')}
     <p style="font-size:clamp(7px,.85vw,9px);color:#999;margin-top:10px;font-style:italic">Every final design started somewhere messier.</p>
@@ -805,7 +810,7 @@ function renderCorkboard(){
   const pinnedHTML=pinned.map((p,i)=>`
     <div class="photo-frame" style="position:relative">
       <div class="photo-thumb" style="background:#222;padding:0;overflow:hidden">
-        <img src="${p.src}" alt="${p.caption}" style="width:100%;height:100%;object-fit:cover;display:block"/>
+        <img src="${p.src}" alt="${p.caption}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block"/>
       </div>
       <div class="photo-caption">${p.caption}</div>
       <button onclick="deleteCorkboardPhoto(${i})" style="position:absolute;top:2px;right:2px;background:#c02020;color:#fff;border:none;font-size:9px;padding:1px 4px;cursor:pointer;font-family:Arial">✕</button>
@@ -882,7 +887,9 @@ function initTitle(){
   const ctx=canvas.getContext('2d');
   let W,H,t=0;
   function resize(){ W=canvas.width=canvas.offsetWidth; H=canvas.height=canvas.offsetHeight; }
-  resize(); window.addEventListener('resize',resize);
+  let resizeRAF=null;
+  function debouncedResize(){ if(resizeRAF) return; resizeRAF=requestAnimationFrame(()=>{ resize(); resizeRAF=null; }); }
+  resize(); window.addEventListener('resize',debouncedResize);
 
   function draw(){
     ctx.clearRect(0,0,W,H);
@@ -1032,7 +1039,9 @@ function initRoom(){
     W=canvas.width=canvas.offsetWidth;
     H=canvas.height=canvas.offsetHeight;
   }
-  resize(); window.addEventListener('resize',resize);
+  let resizeRAF=null;
+  function debouncedResize(){ if(resizeRAF) return; resizeRAF=requestAnimationFrame(()=>{ resize(); resizeRAF=null; }); }
+  resize(); window.addEventListener('resize',debouncedResize);
 
   function drawRoom(zoomFrac=0){
     ctx.clearRect(0,0,W,H);
