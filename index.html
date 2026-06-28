@@ -94,7 +94,7 @@ body { font-family:'Press Start 2P', monospace; }
 .win-desktop { width:100%; height:100%; position:relative; background:#008080; overflow:hidden; user-select:none; }
 .win-wallpaper { position:absolute; inset:0; background:radial-gradient(circle at 30% 40%,rgba(0,120,120,.4) 0%,transparent 50%),#008080; }
 
-.desktop-icons { position:absolute; top:clamp(10px,2vh,24px); left:clamp(10px,2vw,20px); display:flex; flex-direction:column; gap:clamp(12px,2.5vh,28px); }
+.desktop-icons { position:absolute; top:clamp(10px,2vh,24px); left:clamp(10px,2vw,20px); bottom:clamp(30px,5vh,44px); display:flex; flex-direction:column; flex-wrap:wrap; align-content:flex-start; gap:clamp(8px,2vh,22px) clamp(10px,2vw,24px); }
 .desktop-icon { display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; padding:4px 8px; border-radius:3px; width:clamp(52px,8vw,80px); transition:background .1s; }
 .desktop-icon:hover { background:rgba(10,36,106,.6); }
 .desktop-icon.selected { background:rgba(10,36,106,.8); }
@@ -203,7 +203,7 @@ body { font-family:'Press Start 2P', monospace; }
   .back-btn { font-size:9px !important; padding:8px 12px !important; top:auto !important; bottom:0 !important; left:0 !important; right:0 !important; width:100% !important; text-align:center !important; border-radius:0 !important; z-index:200; }
 
   /* Desktop icons — bigger tap targets */
-  .desktop-icons { gap:10px !important; top:8px !important; left:6px !important; }
+  .desktop-icons { gap:10px !important; top:8px !important; left:6px !important; bottom:40px !important; }
   .desktop-icon { width:68px !important; padding:4px 6px !important; }
   .icon-img { font-size:32px !important; width:44px !important; height:44px !important; }
   .icon-label { font-size:10px !important; }
@@ -315,6 +315,26 @@ body { font-family:'Press Start 2P', monospace; }
               <div class="icon-img">🖼️</div>
               <div class="icon-label">My Photos</div>
             </div>
+            <div class="desktop-icon" data-window="skills">
+              <div class="icon-img">📊</div>
+              <div class="icon-label">Skills.exe</div>
+            </div>
+            <div class="desktop-icon" data-window="contact">
+              <div class="icon-img">✉️</div>
+              <div class="icon-label">Contact Me</div>
+            </div>
+            <div class="desktop-icon" data-window="snake">
+              <div class="icon-img">🐍</div>
+              <div class="icon-label">Snake.exe</div>
+            </div>
+            <div class="desktop-icon" data-window="mycomputer">
+              <div class="icon-img">🖥️</div>
+              <div class="icon-label">My Computer</div>
+            </div>
+            <div class="desktop-icon" data-window="recyclebin">
+              <div class="icon-img">🗑️</div>
+              <div class="icon-label">Recycle Bin</div>
+            </div>
           </div>
 
           <!-- CV Window -->
@@ -376,14 +396,80 @@ body { font-family:'Press Start 2P', monospace; }
             <div class="win-content" id="photos-content" style="background:#808080;padding:0;overflow:auto;"></div>
           </div>
 
+          <!-- Skills Window -->
+          <div class="win-window" id="win-skills" style="top:8%;left:18%;width:64%;height:75%;">
+            <div class="win-titlebar">
+              <span>📊</span><span class="win-title-text">Skills.exe</span>
+              <div class="win-btn-group">
+                <button class="win-ctrl-btn">─</button><button class="win-ctrl-btn">□</button>
+                <button class="win-ctrl-btn close" data-close="skills">✕</button>
+              </div>
+            </div>
+            <div class="win-content" id="skills-content" style="font-family:Arial,sans-serif;"></div>
+          </div>
+
+          <!-- Contact Window -->
+          <div class="win-window" id="win-contact" style="top:12%;left:25%;width:50%;height:55%;">
+            <div class="win-titlebar">
+              <span>✉️</span><span class="win-title-text">Contact Me</span>
+              <div class="win-btn-group">
+                <button class="win-ctrl-btn">─</button><button class="win-ctrl-btn">□</button>
+                <button class="win-ctrl-btn close" data-close="contact">✕</button>
+              </div>
+            </div>
+            <div class="win-content" id="contact-content" style="font-family:Arial,sans-serif;"></div>
+          </div>
+
+          <!-- Snake Window -->
+          <div class="win-window" id="win-snake" style="top:5%;left:12%;width:76%;height:88%;">
+            <div class="win-titlebar">
+              <span>🐍</span><span class="win-title-text">Snake.exe</span>
+              <div class="win-btn-group">
+                <button class="win-ctrl-btn">─</button><button class="win-ctrl-btn">□</button>
+                <button class="win-ctrl-btn close" data-close="snake">✕</button>
+              </div>
+            </div>
+            <canvas id="snake-canvas"></canvas>
+          </div>
+
+          <!-- My Computer Window -->
+          <div class="win-window" id="win-mycomputer" style="top:14%;left:24%;width:52%;height:50%;">
+            <div class="win-titlebar">
+              <span>🖥️</span><span class="win-title-text">My Computer — Properties</span>
+              <div class="win-btn-group">
+                <button class="win-ctrl-btn">─</button><button class="win-ctrl-btn">□</button>
+                <button class="win-ctrl-btn close" data-close="mycomputer">✕</button>
+              </div>
+            </div>
+            <div class="win-content" id="mycomputer-content" style="font-family:Arial,sans-serif;"></div>
+          </div>
+
+          <!-- Recycle Bin Window -->
+          <div class="win-window" id="win-recyclebin" style="top:14%;left:22%;width:56%;height:55%;">
+            <div class="win-titlebar">
+              <span>🗑️</span><span class="win-title-text">Recycle Bin</span>
+              <div class="win-btn-group">
+                <button class="win-ctrl-btn">─</button><button class="win-ctrl-btn">□</button>
+                <button class="win-ctrl-btn close" data-close="recyclebin">✕</button>
+              </div>
+            </div>
+            <div class="win-content" id="recyclebin-content" style="font-family:Arial,sans-serif;"></div>
+          </div>
+
           <!-- Taskbar -->
           <div class="win-taskbar">
             <button class="win-start-btn" id="start-btn">⊞ Start
               <div class="start-menu" id="start-menu">
                 <div class="start-menu-item" data-window="cv">📄 My CV</div>
                 <div class="start-menu-item" data-window="browser">🌐 Projects</div>
-                <div class="start-menu-item" data-window="pong">🏓 Pong.exe</div>
+                <div class="start-menu-item" data-window="skills">📊 Skills.exe</div>
+                <div class="start-menu-item" data-window="contact">✉️ Contact Me</div>
                 <div class="start-menu-item" data-window="photos">🖼️ My Photos</div>
+                <div class="start-menu-item" data-window="pong">🏓 Pong.exe</div>
+                <div class="start-menu-item" data-window="snake">🐍 Snake.exe</div>
+                <div class="start-menu-divider"></div>
+                <div class="start-menu-item" data-window="mycomputer">🖥️ My Computer</div>
+                <div class="start-menu-item" data-window="recyclebin">🗑️ Recycle Bin</div>
                 <div class="start-menu-divider"></div>
                 <div class="start-menu-item" id="admin-menu-item">🔐 Administrator</div>
               </div>
@@ -530,6 +616,15 @@ const DEFAULT_DATA = {
       "Music: Passionate guitarist exploring various styles",
       "Wild camping & outdoor activities",
       "Sustainable fashion & entrepreneurship"
+    ],
+    skillBars:[
+      {name:"CAD (Fusion 360 / SolidWorks)",level:80},
+      {name:"Adobe Photoshop",level:75},
+      {name:"Adobe Illustrator",level:75},
+      {name:"Keyshot Rendering",level:70},
+      {name:"Prototyping & Manufacturing",level:80},
+      {name:"Python",level:45},
+      {name:"Microsoft Office",level:85}
     ]
   },
   projects:[
@@ -596,6 +691,72 @@ function renderPhotos(){
     <div class="photo-caption">Add Photo</div>
   </div>`;
   el.innerHTML=`<div class="photos-grid">${uploadedHTML}${addBtn}</div>`;
+}
+
+function renderSkills(){
+  const el=document.getElementById('skills-content');
+  if(!el) return;
+  const bars=DATA.cv.skillBars||[];
+  el.innerHTML=`<div style="padding:14px 18px">
+    <h2 style="font-size:clamp(11px,1.6vw,16px);color:#000080;border-bottom:2px solid #000080;padding-bottom:4px;margin-bottom:14px">Skill Levels</h2>
+    ${bars.map(b=>`
+      <div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:clamp(8px,1vw,11px);margin-bottom:3px"><span>${b.name}</span><span>${b.level}%</span></div>
+        <div style="background:#e0e0e0;border:1px solid #808080;height:14px;border-radius:2px;overflow:hidden">
+          <div style="height:100%;width:${b.level}%;background:linear-gradient(to right,#000080,#1084d0)"></div>
+        </div>
+      </div>`).join('')}
+  </div>`;
+}
+
+function renderContact(){
+  const el=document.getElementById('contact-content');
+  if(!el) return;
+  el.innerHTML=`<div style="padding:18px;text-align:center">
+    <div style="font-size:clamp(28px,4vw,48px);margin-bottom:10px">✉️</div>
+    <h2 style="font-size:clamp(11px,1.6vw,16px);color:#000080;margin-bottom:14px">Get In Touch</h2>
+    <p style="font-size:clamp(8px,1vw,11px);margin-bottom:16px;color:#444">Feel free to reach out about my work, collaborations, or opportunities.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;align-items:center">
+      <a href="mailto:andrewfkyle17@gmail.com" style="background:#000080;color:#fff;padding:8px 18px;text-decoration:none;font-size:clamp(8px,1vw,11px);border-radius:3px">📧 andrewfkyle17@gmail.com</a>
+      <a href="https://andrewkyleportfolio.wordpress.com/" target="_blank" style="color:#000080;font-size:clamp(8px,1vw,11px)">🌐 andrewkyleportfolio.wordpress.com</a>
+    </div>
+  </div>`;
+}
+
+function renderMyComputer(){
+  const el=document.getElementById('mycomputer-content');
+  if(!el) return;
+  el.innerHTML=`<div style="padding:16px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <span style="font-size:32px">🖥️</span>
+      <div><div style="font-weight:bold;font-size:clamp(9px,1.1vw,13px)">ANDREW KYLE PORTFOLIO SYSTEM</div><div style="font-size:clamp(7px,.9vw,10px);color:#666">Designed &amp; built by Andrew Kyle</div></div>
+    </div>
+    <table style="font-size:clamp(8px,1vw,11px);border-collapse:collapse;width:100%">
+      <tr><td style="padding:3px 6px;color:#666">Operating System:</td><td style="padding:3px 6px"><b>Windows 98 (Portfolio Edition)</b></td></tr>
+      <tr><td style="padding:3px 6px;color:#666">Processor:</td><td style="padding:3px 6px"><b>Creative Intel™ Inside</b></td></tr>
+      <tr><td style="padding:3px 6px;color:#666">Memory:</td><td style="padding:3px 6px"><b>64MB Imagination</b></td></tr>
+      <tr><td style="padding:3px 6px;color:#666">Course:</td><td style="padding:3px 6px"><b>BSc Product Design Engineering</b></td></tr>
+      <tr><td style="padding:3px 6px;color:#666">University:</td><td style="padding:3px 6px"><b>Manchester Metropolitan University</b></td></tr>
+      <tr><td style="padding:3px 6px;color:#666">Status:</td><td style="padding:3px 6px"><b>Open to opportunities</b></td></tr>
+    </table>
+  </div>`;
+}
+
+function renderRecycleBin(){
+  const el=document.getElementById('recyclebin-content');
+  if(!el) return;
+  const items=[
+    "Coffee Machine — Early Sketch v1.png",
+    "Playpark Concept — Rejected Theme.f3d",
+    "Lamp Design — Prototype Mk1 (too bulky).png",
+    "Pinball Layout — Scrapped Idea.dwg",
+    "Alarm Clock — First Pass (too plain).png"
+  ];
+  el.innerHTML=`<div style="padding:14px 18px">
+    <p style="font-size:clamp(7px,.9vw,10px);color:#666;margin-bottom:10px">Early concepts and discarded iterations from the design process:</p>
+    ${items.map(i=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #eee;font-size:clamp(8px,1vw,11px)"><span>🗑️</span><span style="color:#777;text-decoration:line-through">${i}</span></div>`).join('')}
+    <p style="font-size:clamp(7px,.85vw,9px);color:#999;margin-top:10px;font-style:italic">Every final design started somewhere messier.</p>
+  </div>`;
 }
 
 function deletePhoto(i){
@@ -1133,7 +1294,7 @@ function initRoom(){
       zoomFrac=1-Math.pow(1-p,3);
       drawRoom(zoomFrac);
       if(p<1){ zoomRAF=requestAnimationFrame(zoomStep); }
-      else { cancelAnimationFrame(roomAnim); fadeGo('pc-screen',()=>{ initPC(); renderCV(); renderProjects(); renderPhotos(); }); }
+      else { cancelAnimationFrame(roomAnim); fadeGo('pc-screen',()=>{ initPC(); renderCV(); renderProjects(); renderPhotos(); renderSkills(); renderContact(); renderMyComputer(); renderRecycleBin(); }); }
     }
     zoomRAF=requestAnimationFrame(zoomStep);
   }
@@ -1149,6 +1310,7 @@ function stopRoom(){ if(roomAnim){cancelAnimationFrame(roomAnim);roomAnim=null;}
 function goBackToRoom(){
   Snd.back();
   stopPong();
+  stopSnake();
   document.querySelectorAll('.win-window').forEach(w=>w.classList.remove('open'));
   document.getElementById('start-menu').classList.remove('open');
   fadeGo('room',()=>{
@@ -1181,6 +1343,7 @@ document.querySelectorAll('.desktop-icon').forEach(icon=>{
   function activateIcon(){
     openWin('win-'+icon.dataset.window);
     if(icon.dataset.window==='pong') initPong();
+    if(icon.dataset.window==='snake') initSnake();
   }
   icon.addEventListener('click',()=>{
     document.querySelectorAll('.desktop-icon').forEach(i=>i.classList.remove('selected'));
@@ -1206,6 +1369,7 @@ document.querySelectorAll('.win-ctrl-btn.close').forEach(btn=>{
     const w=document.getElementById('win-'+btn.dataset.close);
     if(w) w.classList.remove('open');
     if(btn.dataset.close==='pong') stopPong();
+    if(btn.dataset.close==='snake') stopSnake();
     Snd.back();
   });
 });
@@ -1217,7 +1381,7 @@ startBtn.addEventListener('click',e=>{ e.stopPropagation(); startMenu.classList.
 document.addEventListener('click',()=>startMenu.classList.remove('open'));
 
 startMenu.querySelectorAll('.start-menu-item[data-window]').forEach(item=>{
-  item.addEventListener('click',e=>{ e.stopPropagation(); openWin('win-'+item.dataset.window); if(item.dataset.window==='pong') initPong(); startMenu.classList.remove('open'); });
+  item.addEventListener('click',e=>{ e.stopPropagation(); openWin('win-'+item.dataset.window); if(item.dataset.window==='pong') initPong(); if(item.dataset.window==='snake') initSnake(); startMenu.classList.remove('open'); });
 });
 
 document.getElementById('admin-menu-item').addEventListener('click',e=>{
@@ -1318,6 +1482,94 @@ function initPong(){
   loop();
 }
 function stopPong(){ if(pongState){cancelAnimationFrame(pongState.anim);pongState.running=false;pongState.cleanup&&pongState.cleanup();pongState=null;} }
+
+/* ================================================================
+   SNAKE
+================================================================ */
+let snakeState=null;
+function initSnake(){
+  const win=document.getElementById('win-snake');
+  const canvas=document.getElementById('snake-canvas');
+  const tb=win.querySelector('.win-titlebar');
+  const cell=14;
+  const cols=Math.floor((win.clientWidth-4)/cell), rows=Math.floor((win.clientHeight-tb.offsetHeight-4)/cell);
+  canvas.width=cols*cell; canvas.height=rows*cell;
+  const ctx=canvas.getContext('2d');
+  const state={
+    snake:[{x:Math.floor(cols/2),y:Math.floor(rows/2)}],
+    dir:{x:1,y:0}, nextDir:{x:1,y:0},
+    food:{x:Math.floor(Math.random()*cols),y:Math.floor(Math.random()*rows)},
+    score:0, speed:120, lastTick:0, anim:null, running:true, over:false
+  };
+  snakeState=state;
+  function setDir(x,y){ if(state.dir.x===-x&&state.dir.y===-y) return; state.nextDir={x,y}; }
+  function kh(e){
+    const map={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]};
+    if(map[e.key]){ setDir(map[e.key][0],map[e.key][1]); e.preventDefault(); }
+    if(e.key===' '&&state.over) restart();
+  }
+  document.addEventListener('keydown',kh);
+  let touchStart=null;
+  function ts(e){ const t=e.touches[0]; touchStart={x:t.clientX,y:t.clientY}; }
+  function te(e){
+    if(!touchStart) return;
+    const t=e.changedTouches[0];
+    const dx=t.clientX-touchStart.x, dy=t.clientY-touchStart.y;
+    if(Math.abs(dx)<20&&Math.abs(dy)<20){ if(state.over) restart(); return; }
+    if(Math.abs(dx)>Math.abs(dy)) setDir(dx>0?1:-1,0); else setDir(0,dy>0?1:-1);
+    touchStart=null;
+  }
+  canvas.addEventListener('touchstart',ts,{passive:true});
+  canvas.addEventListener('touchend',te,{passive:true});
+  function restart(){
+    state.snake=[{x:Math.floor(cols/2),y:Math.floor(rows/2)}];
+    state.dir={x:1,y:0}; state.nextDir={x:1,y:0};
+    state.food={x:Math.floor(Math.random()*cols),y:Math.floor(Math.random()*rows)};
+    state.score=0; state.speed=120; state.over=false;
+  }
+  state.cleanup=()=>{
+    document.removeEventListener('keydown',kh);
+    canvas.removeEventListener('touchstart',ts); canvas.removeEventListener('touchend',te);
+  };
+  function draw(){
+    ctx.fillStyle='#0a0a0a'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#f44'; ctx.fillRect(state.food.x*cell+1,state.food.y*cell+1,cell-2,cell-2);
+    state.snake.forEach((s,i)=>{
+      ctx.fillStyle=i===0?'#6f6':'#4a4';
+      ctx.fillRect(s.x*cell+1,s.y*cell+1,cell-2,cell-2);
+    });
+    ctx.font=`${Math.floor(cell*1.1)}px 'Press Start 2P',monospace`;ctx.fillStyle='rgba(255,255,255,.6)';ctx.textAlign='left';
+    ctx.fillText('Score: '+state.score,6,cell*1.3);
+    if(state.over){
+      ctx.textAlign='center';ctx.fillStyle='#fff';
+      ctx.font=`${Math.floor(cell*1.4)}px 'Press Start 2P',monospace`;
+      ctx.fillText('GAME OVER',canvas.width/2,canvas.height/2-10);
+      ctx.font=`${Math.floor(cell*.8)}px 'Press Start 2P',monospace`;
+      ctx.fillText(('ontouchstart' in window)?'tap to restart':'press space',canvas.width/2,canvas.height/2+18);
+    }
+  }
+  function loop(ts2){
+    if(!state.running) return;
+    if(!state.over && ts2-state.lastTick>state.speed){
+      state.lastTick=ts2;
+      state.dir=state.nextDir;
+      const head={x:state.snake[0].x+state.dir.x,y:state.snake[0].y+state.dir.y};
+      if(head.x<0||head.x>=cols||head.y<0||head.y>=rows||state.snake.some(s=>s.x===head.x&&s.y===head.y)){
+        state.over=true; Snd.pongScore();
+      } else {
+        state.snake.unshift(head);
+        if(head.x===state.food.x&&head.y===state.food.y){
+          state.score++; Snd.pongHit(); state.speed=Math.max(60,state.speed-2);
+          state.food={x:Math.floor(Math.random()*cols),y:Math.floor(Math.random()*rows)};
+        } else { state.snake.pop(); }
+      }
+    }
+    draw();
+    state.anim=requestAnimationFrame(loop);
+  }
+  state.anim=requestAnimationFrame(loop);
+}
+function stopSnake(){ if(snakeState){cancelAnimationFrame(snakeState.anim);snakeState.running=false;snakeState.cleanup&&snakeState.cleanup();snakeState=null;} }
 
 /* ================================================================
    ADMIN SYSTEM
