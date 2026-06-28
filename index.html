@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+/* ============================================================ BASE */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width:100%; height:100%; overflow:hidden; background:#000; cursor:default; }
+body { font-family:'Press Start 2P', monospace; }
+
+.screen { position:absolute; inset:0; width:100%; height:100%; display:none; }
+.screen.active { display:block; }
+
+/* overlays */
+#scanlines {
+  position:fixed; inset:0; pointer-events:none; z-index:9999;
+  background:repeating-linear-gradient(to bottom,transparent 0,transparent 3px,rgba(0,0,0,0.07) 3px,rgba(0,0,0,0.07) 4px);
+}
+#vignette {
+  position:fixed; inset:0; pointer-events:none; z-index:9998;
+  background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,0.65) 100%);
+}
+#fade {
+  position:fixed; inset:0; background:#000; pointer-events:none;
+  z-index:9997; opacity:0; transition:opacity 0.6s ease;
+}
+#fade.out { opacity:1; }
+
+/* ============================================================ BOOT */
+#boot { background:#000; }
+#boot.active { display:flex; align-items:center; justify-content:center; flex-direction:column; gap:40px; }
+
+.ps2-logo-wrap { opacity:0; animation:logoIn 1.2s ease 1.0s forwards; }
+@keyframes logoIn { from{opacity:0;transform:scale(0.85)} to{opacity:1;transform:scale(1)} }
+
+.ps2-logo { font-size:clamp(28px,6vw,72px); color:#fff; letter-spacing:.12em; text-shadow:0 0 20px rgba(100,160,255,.9),0 0 60px rgba(60,100,255,.5); }
+.ps2-logo span.p { color:#4488ff; }
+.ps2-logo span.two { font-size:.55em; vertical-align:super; color:#aaccff; }
+
+.boot-beam { position:absolute; top:50%; left:50%; width:1px; height:1px; transform:translate(-50%,-50%); animation:beamX 1.5s ease 0.5s forwards; pointer-events:none; }
+@keyframes beamX { 0%{box-shadow:0 0 0 0 rgba(80,140,255,0)} 30%{box-shadow:0 0 120px 80px rgba(80,140,255,.35)} 100%{box-shadow:0 0 300px 200px rgba(80,140,255,0)} }
+
+.boot-subtitle { font-size:clamp(7px,1.5vw,11px); color:#556; letter-spacing:.25em; opacity:0; animation:logoIn 1s ease 2s forwards; }
+.boot-bars { display:flex; gap:6px; opacity:0; animation:logoIn 0.8s ease 2.6s forwards; }
+.boot-bar { width:clamp(18px,2.5vw,28px); height:clamp(18px,2.5vw,28px); border-radius:3px; animation:barP 1.4s ease-in-out infinite; }
+.boot-bar:nth-child(1){background:#4af;animation-delay:0s}
+.boot-bar:nth-child(2){background:#f84;animation-delay:.3s}
+.boot-bar:nth-child(3){background:#4f8;animation-delay:.6s}
+.boot-bar:nth-child(4){background:#f4a;animation-delay:.9s}
+@keyframes barP { 0%,100%{opacity:.3;transform:scaleY(.6)} 50%{opacity:1;transform:scaleY(1)} }
+
+/* ============================================================ TITLE */
+#title { background:#000; overflow:hidden; }
+#title-canvas { position:absolute; inset:0; width:100%; height:100%; }
+.title-overlay { position:absolute; inset:0; background:rgba(0,0,20,.55); display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:8vh; gap:clamp(12px,3vh,28px); }
+.title-name { font-size:clamp(14px,3.5vw,42px); color:#fff; text-shadow:0 0 30px rgba(100,180,255,.8),0 2px 0 #000; animation:glow 3s ease-in-out infinite; }
+@keyframes glow { 0%,100%{text-shadow:0 0 20px rgba(100,180,255,.6),0 2px 0 #000} 50%{text-shadow:0 0 50px rgba(100,180,255,1),0 0 80px rgba(60,120,255,.5),0 2px 0 #000} }
+.title-subtitle { font-size:clamp(6px,1.2vw,12px); color:#88aadd; letter-spacing:.3em; }
+.title-divider { width:clamp(200px,40vw,480px); height:1px; background:linear-gradient(to right,transparent,#4af,transparent); margin:clamp(4px,1vh,12px) 0; }
+.press-start { font-size:clamp(8px,1.8vw,16px); color:#fff; animation:blink 1.1s step-end infinite; margin-top:clamp(8px,2vh,24px); cursor:pointer; text-shadow:0 0 16px rgba(200,230,255,.8); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+.title-hud { position:absolute; bottom:4vh; right:4vw; display:flex; align-items:center; gap:12px; font-size:clamp(5px,.9vw,8px); color:#556688; }
+.mem-card-icon { width:clamp(18px,2vw,26px); height:clamp(26px,3vw,36px); background:#1a2a4a; border-radius:3px; border:1px solid #334; position:relative; overflow:hidden; }
+.mem-card-icon::before { content:''; position:absolute; top:3px; left:3px; right:3px; height:4px; background:#4af; border-radius:1px; }
+.mem-card-icon::after { content:'MC'; position:absolute; bottom:4px; left:0; right:0; text-align:center; font-family:'Press Start 2P',monospace; font-size:5px; color:#4af; }
+
+/* ============================================================ ROOM */
+#room { background:#000; }
+#room-canvas { position:absolute; inset:0; width:100%; height:100%; cursor:default; }
+.room-hud { position:absolute; top:3vh; left:3vw; pointer-events:none; }
+.hud-label { font-size:clamp(5px,.8vw,8px); color:#4af; letter-spacing:.2em; text-shadow:0 0 8px #4af; }
+.hud-item-name { font-size:clamp(6px,.9vw,9px); color:#fff; margin-top:4px; min-height:1em; }
+.hud-hint { font-size:clamp(4px,.7vw,7px); color:#556; margin-top:2px; min-height:1em; }
+
+/* ============================================================ PC */
+#pc-screen { background:#000; }
+#pc-screen.active { display:flex; align-items:center; justify-content:center; }
+
+.monitor-wrap { position:relative; width:min(88vw,145vh); height:min(66vw,108vh); animation:monZoom .5s cubic-bezier(.2,.8,.3,1) forwards; }
+@keyframes monZoom { from{transform:scale(.5) translateY(20%);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
+
+.monitor-bezel {
+  position:absolute; inset:0;
+  background:linear-gradient(145deg,#c8c8b8,#a0a090,#909080);
+  border-radius:clamp(8px,1.5vw,20px);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.4),inset 0 -2px 0 rgba(0,0,0,.3),0 20px 60px rgba(0,0,0,.8),0 0 0 2px #706050;
+  padding:clamp(10px,2vw,26px);
+  padding-bottom:clamp(20px,4vw,50px);
+}
+.monitor-screen { width:100%; height:100%; background:#008080; border-radius:clamp(4px,.8vw,10px); overflow:hidden; position:relative; box-shadow:inset 0 0 30px rgba(0,0,0,.5); }
+.win-desktop { width:100%; height:100%; position:relative; background:#008080; overflow:hidden; user-select:none; }
+.win-wallpaper { position:absolute; inset:0; background:radial-gradient(circle at 30% 40%,rgba(0,120,120,.4) 0%,transparent 50%),#008080; }
+
+.desktop-icons { position:absolute; top:clamp(10px,2vh,24px); left:clamp(10px,2vw,20px); display:flex; flex-direction:column; gap:clamp(12px,2.5vh,28px); }
+.desktop-icon { display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; padding:4px 8px; border-radius:3px; width:clamp(52px,8vw,80px); transition:background .1s; }
+.desktop-icon:hover { background:rgba(10,36,106,.6); }
+.desktop-icon.selected { background:rgba(10,36,106,.8); }
+.icon-img { width:clamp(28px,4.5vw,48px); height:clamp(28px,4.5vw,48px); display:flex; align-items:center; justify-content:center; font-size:clamp(18px,3vw,36px); }
+.icon-label { font-family:'Segoe UI',Arial,sans-serif; font-size:clamp(7px,1.1vw,11px); color:#fff; text-shadow:1px 1px 1px #000; text-align:center; line-height:1.3; }
+
+.win-taskbar { position:absolute; bottom:0; left:0; right:0; height:clamp(22px,4vh,36px); background:linear-gradient(to bottom,#c0c0c0,#a0a0a0); border-top:1px solid #fff; display:flex; align-items:center; padding:0 2px; gap:2px; box-shadow:inset 0 1px 0 rgba(255,255,255,.8); }
+.win-start-btn { height:85%; padding:0 clamp(6px,1.2vw,12px); background:linear-gradient(to bottom,#d8d8d8,#b0b0b0); border:1px solid; border-color:#fff #808080 #808080 #fff; font-family:'Press Start 2P',monospace; font-size:clamp(5px,.8vw,8px); cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:4px; position:relative; }
+.win-clock { margin-left:auto; height:85%; padding:0 clamp(4px,.8vw,10px); background:#c0c0c0; border:1px solid; border-color:#808080 #fff #fff #808080; font-family:'Segoe UI',Arial,sans-serif; font-size:clamp(7px,1.1vw,11px); display:flex; align-items:center; }
+
+/* Start menu */
+.start-menu { position:absolute; bottom:100%; left:0; background:#c0c0c0; border:2px solid; border-color:#fff #808080 #808080 #fff; box-shadow:3px 3px 0 #000; display:none; min-width:160px; z-index:50; }
+.start-menu.open { display:block; }
+.start-menu-item { padding:clamp(4px,.8vh,8px) clamp(10px,1.5vw,16px); font-family:'Segoe UI',Arial,sans-serif; font-size:clamp(8px,1.1vw,12px); cursor:pointer; white-space:nowrap; display:flex; align-items:center; gap:8px; }
+.start-menu-item:hover { background:#000080; color:#fff; }
+.start-menu-divider { height:1px; background:#808080; margin:2px 0; }
+
+.win-window { position:absolute; background:#c0c0c0; border:2px solid; border-color:#fff #808080 #808080 #fff; box-shadow:3px 3px 0 #000; display:none; flex-direction:column; overflow:hidden; z-index:10; }
+.win-window.open { display:flex; }
+.win-titlebar { background:linear-gradient(to right,#000080,#1084d0); color:#fff; padding:clamp(2px,.5vh,4px) clamp(4px,.8vw,8px); display:flex; align-items:center; gap:6px; cursor:move; user-select:none; flex-shrink:0; }
+.win-title-text { font-family:'Segoe UI',Arial,sans-serif; font-size:clamp(8px,1.2vw,12px); flex:1; white-space:nowrap; overflow:hidden; }
+.win-btn-group { display:flex; gap:2px; }
+.win-ctrl-btn { width:clamp(14px,2vw,20px); height:clamp(12px,1.8vh,18px); background:#c0c0c0; border:1px solid; border-color:#fff #808080 #808080 #fff; font-family:Arial,sans-serif; font-size:clamp(8px,1.1vw,12px); line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.win-ctrl-btn.close:hover { background:#ff4040; color:#fff; }
+
+.win-content { flex:1; overflow:auto; background:#fff; padding:clamp(8px,1.5vw,16px); font-family:'Courier New',monospace; font-size:clamp(8px,1.2vw,13px); line-height:1.6; color:#000; }
+.cv-content h2 { font-family:Arial,sans-serif; font-size:clamp(10px,1.6vw,18px); border-bottom:2px solid #000080; padding-bottom:4px; margin:12px 0 6px; color:#000080; }
+.cv-content p,.cv-content li { font-family:Arial,sans-serif; font-size:clamp(7px,1.1vw,12px); margin:3px 0; }
+.cv-content ul { padding-left:16px; }
+
+.browser-bar { display:flex; align-items:center; gap:4px; padding:4px 6px; background:#c0c0c0; border-bottom:1px solid #808080; flex-shrink:0; }
+.browser-url { flex:1; background:#fff; border:1px solid; border-color:#808080 #fff #fff #808080; padding:2px 4px; font-family:Arial,sans-serif; font-size:clamp(7px,1vw,11px); }
+.browser-body { flex:1; overflow:auto; background:#fff; padding:clamp(8px,1.5vw,16px); }
+.project-card { border:1px solid #c0c0c0; border-radius:4px; margin-bottom:12px; overflow:hidden; }
+.project-card-header { background:#000080; color:#fff; padding:6px 10px; font-family:Arial,sans-serif; font-size:clamp(8px,1.2vw,13px); font-weight:bold; }
+.project-card-body { padding:8px 10px; font-family:Arial,sans-serif; font-size:clamp(7px,1vw,11px); color:#333; line-height:1.5; }
+.project-tag { display:inline-block; background:#eef; border:1px solid #88a; border-radius:2px; padding:1px 5px; font-size:clamp(6px,.8vw,9px); color:#448; margin:2px 2px 0 0; }
+.project-card-img { width:100%; max-height:clamp(80px,14vw,180px); overflow:hidden; background:#e0e0e0; }
+.project-card-img img { width:100%; height:clamp(80px,14vw,180px); object-fit:cover; display:block; }
+
+#pong-canvas { display:block; background:#000; width:100%; height:100%; image-rendering:pixelated; }
+
+.back-btn { position:absolute; top:clamp(8px,1.5vh,16px); left:clamp(8px,1.5vw,16px); background:rgba(0,10,40,.85); color:#4af; border:1px solid #4af; padding:clamp(5px,1vh,10px) clamp(8px,1.5vw,16px); font-family:'Press Start 2P',monospace; font-size:clamp(5px,.8vw,8px); cursor:pointer; letter-spacing:.1em; z-index:100; transition:background .15s,color .15s; }
+.back-btn:hover { background:#4af; color:#000; }
+
+.monitor-brand { position:absolute; bottom:clamp(6px,1.2vw,14px); left:50%; transform:translateX(-50%); font-family:Arial,sans-serif; font-size:clamp(6px,.9vw,10px); color:#706050; letter-spacing:.3em; text-transform:uppercase; pointer-events:none; }
+
+/* ============================================================ ADMIN */
+#admin-modal { position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:9990; display:none; align-items:center; justify-content:center; }
+#admin-modal.open { display:flex; }
+.admin-window { background:#c0c0c0; border:2px solid; border-color:#fff #808080 #808080 #fff; box-shadow:4px 4px 0 #000; width:min(90vw,700px); max-height:85vh; display:flex; flex-direction:column; }
+.admin-titlebar { background:linear-gradient(to right,#800000,#c02020); color:#fff; padding:6px 10px; display:flex; align-items:center; justify-content:space-between; font-size:clamp(7px,1vw,10px); flex-shrink:0; }
+.admin-body { flex:1; overflow:auto; padding:16px; display:flex; flex-direction:column; gap:14px; }
+.admin-tabs { display:flex; gap:0; border-bottom:2px solid #808080; flex-shrink:0; }
+.admin-tab { padding:6px 14px; font-family:'Press Start 2P',monospace; font-size:clamp(5px,.7vw,8px); cursor:pointer; background:#c0c0c0; border:1px solid; border-color:#fff #808080 transparent #fff; margin-bottom:-2px; }
+.admin-tab.active { background:#fff; border-bottom-color:#fff; }
+.admin-tab-content { display:none; }
+.admin-tab-content.active { display:block; }
+.admin-field { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
+.admin-field label { font-family:'Press Start 2P',monospace; font-size:clamp(5px,.7vw,7px); color:#000080; }
+.admin-field textarea, .admin-field input { font-family:'Courier New',monospace; font-size:clamp(8px,1vw,12px); border:2px inset #808080; padding:4px; background:#fff; width:100%; resize:vertical; }
+.admin-field textarea { min-height:60px; }
+.admin-save-btn { background:linear-gradient(to bottom,#d8d8d8,#b0b0b0); border:2px solid; border-color:#fff #808080 #808080 #fff; padding:8px 20px; font-family:'Press Start 2P',monospace; font-size:clamp(5px,.7vw,8px); cursor:pointer; align-self:flex-end; }
+.admin-save-btn:hover { background:linear-gradient(to bottom,#e8e8e8,#c0c0c0); }
+.admin-project-row { border:1px solid #a0a0a0; padding:8px; margin-bottom:8px; background:#f0f0f0; }
+.admin-project-row input { margin-bottom:4px; }
+.admin-btn-small { background:#c0c0c0; border:1px solid; border-color:#fff #808080 #808080 #fff; padding:2px 8px; font-family:Arial,sans-serif; font-size:clamp(7px,1vw,11px); cursor:pointer; }
+.admin-btn-add { background:#d0ffd0; border:1px solid #40a040; padding:4px 12px; font-family:'Press Start 2P',monospace; font-size:clamp(5px,.7vw,7px); cursor:pointer; margin-bottom:8px; }
+
+/* Photos */
+.photos-grid { display:flex; flex-wrap:wrap; gap:clamp(6px,1vw,12px); padding:clamp(6px,1.2vw,14px); background:#808080; align-content:flex-start; }
+.photo-frame { background:#fff; padding:clamp(4px,.6vw,8px) clamp(4px,.6vw,8px) clamp(18px,2.8vh,28px); box-shadow:3px 3px 6px rgba(0,0,0,.5); cursor:pointer; flex-shrink:0; transition:transform .12s,box-shadow .12s; }
+.photo-frame:hover { transform:scale(1.04) rotate(0.5deg); box-shadow:5px 5px 10px rgba(0,0,0,.65); }
+.photo-thumb { width:clamp(70px,9vw,120px); height:clamp(52px,7vw,90px); display:flex; align-items:center; justify-content:center; font-size:clamp(22px,3vw,40px); border:1px solid #ddd; }
+.photo-caption { font-family:Arial,sans-serif; font-size:clamp(5px,.75vw,9px); text-align:center; color:#444; margin-top:clamp(3px,.5vh,6px); white-space:nowrap; overflow:hidden; max-width:100%; }
+.photo-toolbar { display:flex; align-items:center; gap:4px; padding:3px 6px; background:#c0c0c0; border-bottom:1px solid #808080; flex-shrink:0; }
+.photo-toolbar button { font-family:Arial,sans-serif; font-size:clamp(7px,.9vw,10px); background:#c0c0c0; border:1px solid; border-color:#fff #808080 #808080 #fff; padding:2px 8px; cursor:pointer; }
+.photo-toolbar button:active { border-color:#808080 #fff #fff #808080; }
+
+/* password prompt */
+.pw-prompt { display:flex; flex-direction:column; align-items:center; gap:12px; padding:20px; }
+.pw-prompt input { font-family:monospace; font-size:16px; padding:8px; border:2px inset #808080; background:#fff; text-align:center; letter-spacing:.3em; }
+.pw-prompt p { font-size:clamp(6px,.8vw,9px); color:#600; }
+
+/* ============================================================ MOBILE */
+@media (max-width: 767px) {
+  /* Title screen — readable text on phones */
+  .title-name { font-size:clamp(20px,7vw,36px) !important; }
+  .title-subtitle { font-size:clamp(7px,2.8vw,13px) !important; letter-spacing:.15em !important; }
+  .press-start { font-size:clamp(10px,3.5vw,16px) !important; }
+  .title-hud { display:none; }
+
+  /* Room HUD — bigger on mobile */
+  .hud-label { font-size:11px !important; }
+  .hud-item-name { font-size:12px !important; }
+  .hud-hint { font-size:10px !important; }
+
+  /* PC screen — fill viewport, no monitor shell */
+  #pc-screen.active { display:block !important; overflow:auto; }
+  .monitor-wrap { width:100vw !important; height:100vh !important; max-width:100vw !important; animation:none !important; }
+  .monitor-bezel { border-radius:0 !important; padding:0 !important; background:#c0c0c0 !important; box-shadow:none !important; }
+  .monitor-screen { border-radius:0 !important; }
+  .monitor-brand { display:none; }
+  .back-btn { font-size:9px !important; padding:8px 12px !important; top:auto !important; bottom:0 !important; left:0 !important; right:0 !important; width:100% !important; text-align:center !important; border-radius:0 !important; z-index:200; }
+
+  /* Desktop icons — bigger tap targets */
+  .desktop-icons { gap:6px !important; top:6px !important; left:4px !important; }
+  .desktop-icon { width:52px !important; padding:3px 4px !important; }
+  .icon-img { font-size:24px !important; width:32px !important; height:32px !important; }
+  .icon-label { font-size:8px !important; }
+
+  /* Taskbar */
+  .win-taskbar { height:32px !important; }
+  .win-start-btn { font-size:8px !important; padding:0 8px !important; }
+  .win-clock { font-size:10px !important; }
+  .start-menu-item { font-size:13px !important; padding:10px 14px !important; }
+
+  /* Windows — near full screen on mobile */
+  .win-window { top:2% !important; left:1% !important; width:98% !important; height:88% !important; }
+
+  /* Window content text */
+  .win-title-text { font-size:11px !important; }
+  .win-ctrl-btn { width:24px !important; height:22px !important; font-size:13px !important; }
+  .win-content { font-size:12px !important; padding:10px !important; }
+  .cv-content h2 { font-size:14px !important; }
+  .cv-content p, .cv-content li { font-size:11px !important; }
+  .project-card-header { font-size:12px !important; }
+  .project-card-body { font-size:11px !important; }
+  .project-tag { font-size:9px !important; }
+  .browser-url { font-size:10px !important; }
+
+  /* Photos grid */
+  .photos-grid { gap:8px !important; padding:8px !important; }
+  .photo-thumb { width:80px !important; height:62px !important; font-size:26px !important; }
+  .photo-caption { font-size:8px !important; }
+
+  /* Admin modal */
+  .admin-window { width:98vw !important; max-height:92vh !important; }
+  .admin-field textarea, .admin-field input { font-size:14px !important; }
+}
+
+/* Touch-friendly: always-visible active state instead of hover-only */
+@media (hover: none) {
+  .desktop-icon:active { background:rgba(10,36,106,.8) !important; }
+  .win-ctrl-btn:active { background:#a0a0a0 !important; }
+  .start-menu-item:active { background:#000080 !important; color:#fff !important; }
+}
+</style>
+</head>
+<body>
+<div id="scanlines"></div>
+<div id="vignette"></div>
+<div id="fade"></div>
+
+<!-- ═══════════════════ BOOT ═══════════════════ -->
+<div id="boot" class="screen active">
+  <div class="boot-beam"></div>
+  <div class="ps2-logo-wrap">
+    <div class="ps2-logo"><span class="p">P</span>S<span class="two">2</span></div>
+  </div>
+  <div class="boot-subtitle">PORTFOLIO SYSTEM</div>
+  <div class="boot-bars">
+    <div class="boot-bar"></div><div class="boot-bar"></div>
+    <div class="boot-bar"></div><div class="boot-bar"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TITLE ═══════════════════ -->
+<div id="title" class="screen">
+  <canvas id="title-canvas"></canvas>
+  <div class="title-overlay">
+    <div class="title-name">ANDREW KYLE</div>
+    <div class="title-subtitle">PRODUCT DESIGN ENGINEER · MANCHESTER MET</div>
+    <div class="title-divider"></div>
+    <div class="press-start" id="press-start">— PRESS START —</div>
+  </div>
+  <div class="title-hud">
+    <div class="mem-card-icon"></div>
+    <span style="font-size:clamp(5px,.8vw,8px);color:#334">MEMORY CARD</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ ROOM ═══════════════════ -->
+<div id="room" class="screen">
+  <canvas id="room-canvas"></canvas>
+  <div class="room-hud">
+    <div class="hud-label">▶ SELECT</div>
+    <div class="hud-item-name" id="hud-item-name"></div>
+    <div class="hud-hint" id="hud-hint"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ PC ═══════════════════ -->
+<div id="pc-screen" class="screen">
+  <button class="back-btn" id="pc-back">◀ BACK</button>
+  <div class="monitor-wrap">
+    <div class="monitor-bezel">
+      <div class="monitor-screen">
+        <div class="win-desktop" id="win-desktop">
+          <div class="win-wallpaper"></div>
+
+          <div class="desktop-icons">
+            <div class="desktop-icon" data-window="cv">
+              <div class="icon-img">📄</div>
+              <div class="icon-label">My CV</div>
+            </div>
+            <div class="desktop-icon" data-window="browser">
+              <div class="icon-img">🌐</div>
+              <div class="icon-label">Projects</div>
+            </div>
+            <div class="desktop-icon" data-window="pong">
+              <div class="icon-img">🏓</div>
+              <div class="icon-label">Pong.exe</div>
+            </div>
+            <div class="desktop-icon" data-window="photos">
+              <div class="icon-img">🖼️</div>
+              <div class="icon-label">My Photos</div>
+            </div>
+          </div>
+
+          <!-- CV Window -->
+          <div class="win-window" id="win-cv" style="top:8%;left:20%;width:60%;height:75%;">
+            <div class="win-titlebar">
+              <span>📄</span><span class="win-title-text">My CV — Notepad</span>
+              <div class="win-btn-group">
+                <button class="win-ctrl-btn">─</button><button class="win-ctrl-btn">□</button>
+                <button class="win-ctrl-btn close" data-close="cv">✕</button>
+              </div>
+            </div>
+            <div class="win-content cv-content" id="cv-content"><!-- populated by JS --></div>
+          </div>
+
+          <!-- Browser Window -->
+          <div class="win-window" id="win-browser" style="top:5%;left:8%;width:82%;height:85%;">
+            <div class="win-titlebar">
+              <span>🌐</span><span class="win-title-text">Projects — RetroExplorer 4.0</span>
+              <div class="win-btn-group">
+                <button class="win-ctrl-btn">─</button><button class="win-ctrl-btn">□</button>
+                <button class="win-ctrl-btn close" data-close="browser">✕</button>
+              </div>
+            </div>
+            <div class="browser-bar">
+              <span style="font-family:Arial;font-size:clamp(7px,1vw,10px)">⬅ ➡ 🔄</span>
+              <div class="browser-url">http://portfolio.local/projects</div>
+              <button style="font-family:Arial;font-size:clamp(7px,1vw,10px);background:#c0c0c0;border:1px solid #808080;padding:1px 6px;cursor:pointer">Go</button>
+            </div>
+            <div class="browser-body" id="projects-content"><!-- populated by JS --></div>
+          </div>
+
+          <!-- Pong Window -->
+          <div class="win-window" id="win-pong" style="top:5%;left:12%;width:76%;height:88%;">
+            <div class="win-titlebar">
+              <span>🏓</span><span class="win-title-text">Pong.exe</span>
+              <div class="win-btn-group">
+                <button class="win-ctrl-btn">─</button><button class="win-ctrl-btn">□</button>
+                <button class="win-ctrl-btn close" data-close="pong">✕</button>
+              </div>
+            </div>
+            <canvas id="pong-canvas"></canvas>
+          </div>
+
+          <!-- Photos Window -->
+          <div class="win-window" id="win-photos" style="top:5%;left:8%;width:80%;height:83%;">
+            <div class="win-titlebar">
+              <span>🖼️</span><span class="win-title-text">My Photos — Photo Viewer</span>
+              <div class="win-btn-group">
+                <button class="win-ctrl-btn">─</button><button class="win-ctrl-btn">□</button>
+                <button class="win-ctrl-btn close" data-close="photos">✕</button>
+              </div>
+            </div>
+            <div class="photo-toolbar">
+              <button onclick="document.getElementById('photo-file-input').click()">📁 Add Photo</button>
+              <input type="file" id="photo-file-input" accept="image/*" multiple style="display:none" onchange="Array.from(this.files).forEach(addPhotoFromFile);this.value=''"/>
+              <span style="width:1px;height:16px;background:#808080;margin:0 2px;display:inline-block"></span>
+              <span style="font-family:Arial;font-size:clamp(6px,.8vw,9px);color:#555;margin-left:auto">Photo Viewer 1.0 — click ➕ or Add Photo to upload</span>
+            </div>
+            <div class="win-content" id="photos-content" style="background:#808080;padding:0;overflow:auto;"></div>
+          </div>
+
+          <!-- Taskbar -->
+          <div class="win-taskbar">
+            <button class="win-start-btn" id="start-btn">⊞ Start
+              <div class="start-menu" id="start-menu">
+                <div class="start-menu-item" data-window="cv">📄 My CV</div>
+                <div class="start-menu-item" data-window="browser">🌐 Projects</div>
+                <div class="start-menu-item" data-window="pong">🏓 Pong.exe</div>
+                <div class="start-menu-item" data-window="photos">🖼️ My Photos</div>
+                <div class="start-menu-divider"></div>
+                <div class="start-menu-item" id="admin-menu-item">🔐 Administrator</div>
+              </div>
+            </button>
+            <div style="flex:1"></div>
+            <div class="win-clock" id="win-clock">12:00</div>
+          </div>
+        </div>
+      </div>
+      <div class="monitor-brand">SONY TRINITRON</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ ADMIN MODAL ═══════════════════ -->
+<div id="admin-modal">
+  <div class="admin-window">
+    <div class="admin-titlebar">
+      <span>🔐 ADMINISTRATOR — PORTFOLIO EDITOR</span>
+      <button class="win-ctrl-btn close" id="admin-close" style="background:#c02020;border-color:#f06060 #800000 #800000 #f06060">✕</button>
+    </div>
+
+    <!-- Password screen -->
+    <div id="admin-pw-screen" class="admin-body">
+      <div class="pw-prompt">
+        <div style="font-size:clamp(6px,.8vw,9px);margin-bottom:8px">ENTER ADMIN PASSWORD</div>
+        <input type="password" id="admin-pw-input" placeholder="••••••••" autocomplete="off"/>
+        <button class="admin-save-btn" id="admin-pw-btn">ENTER</button>
+        <p id="admin-pw-error"></p>
+      </div>
+    </div>
+
+    <!-- Editor screen (hidden until authenticated) -->
+    <div id="admin-editor-screen" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+      <div class="admin-tabs">
+        <div class="admin-tab active" data-tab="cv">CV</div>
+        <div class="admin-tab" data-tab="projects">PROJECTS</div>
+        <div class="admin-tab" data-tab="photos">PHOTOS</div>
+      </div>
+      <div class="admin-body">
+        <!-- CV Tab -->
+        <div id="admin-tab-cv" class="admin-tab-content active">
+          <div class="admin-field"><label>NAME</label><input type="text" id="a-name"/></div>
+          <div class="admin-field"><label>TITLE / TAGLINE</label><input type="text" id="a-title"/></div>
+          <div class="admin-field"><label>EXPERIENCE (one per line)</label><textarea id="a-experience" rows="5"></textarea></div>
+          <div class="admin-field"><label>SKILLS (one per line)</label><textarea id="a-skills" rows="5"></textarea></div>
+          <div class="admin-field"><label>EDUCATION (one per line)</label><textarea id="a-education" rows="3"></textarea></div>
+          <div class="admin-field"><label>INTERESTS (one per line)</label><textarea id="a-interests" rows="3"></textarea></div>
+        </div>
+        <!-- Projects Tab -->
+        <div id="admin-tab-projects" class="admin-tab-content">
+          <button class="admin-btn-add" id="admin-add-project">+ ADD PROJECT</button>
+          <div id="admin-projects-list"></div>
+        </div>
+
+        <!-- Photos Tab -->
+        <div id="admin-tab-photos" class="admin-tab-content">
+          <div style="font-family:'Press Start 2P',monospace;font-size:clamp(5px,.7vw,7px);color:#000080;margin-bottom:8px">UPLOAD PHOTOS TO ALBUM</div>
+          <input type="file" id="admin-photo-upload" accept="image/*" multiple style="font-family:Arial;font-size:clamp(8px,1vw,11px);margin-bottom:8px"/>
+          <button class="admin-btn-small" id="admin-photo-add-btn" style="margin-bottom:12px">Add Selected Photos</button>
+          <div style="font-family:'Press Start 2P',monospace;font-size:clamp(5px,.7vw,7px);color:#000080;margin-bottom:6px" id="admin-photos-count">CURRENT PHOTOS</div>
+          <div id="admin-photos-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+        </div>
+
+        <button class="admin-save-btn" id="admin-save">💾 SAVE CHANGES</button>
+        <div id="admin-save-msg" style="font-size:7px;color:green;text-align:right;margin-top:4px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   AUDIO
+================================================================ */
+const Snd = (() => {
+  let ctx=null;
+  function C(){ if(!ctx) ctx=new(window.AudioContext||window.webkitAudioContext)(); return ctx; }
+  function beep(f,d,type='square',v=0.12,delay=0){
+    try{const c=C(),o=c.createOscillator(),g=c.createGain();
+    o.connect(g);g.connect(c.destination);o.type=type;o.frequency.value=f;
+    g.gain.setValueAtTime(0,c.currentTime+delay);
+    g.gain.linearRampToValueAtTime(v,c.currentTime+delay+0.01);
+    g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+delay+d);
+    o.start(c.currentTime+delay);o.stop(c.currentTime+delay+d+0.05);}catch(e){}
+  }
+  return {
+    boot(){ beep(220,.3,'sine',.2,.8);beep(330,.3,'sine',.2,1.1);beep(440,.5,'sine',.25,1.4);beep(880,.8,'sine',.2,1.8); },
+    select(){ beep(660,.05,'square',.06); },
+    confirm(){ beep(440,.05,'square',.09,0);beep(880,.09,'square',.09,.05); },
+    back(){ beep(220,.1,'square',.07); },
+    pongHit(){ beep(440,.03,'square',.05); },
+    pongScore(){ beep(220,.08,'square',.09,0);beep(165,.16,'square',.09,.08); },
+  };
+})();
+
+/* ================================================================
+   STATE
+================================================================ */
+let currentScreen='boot';
+function fadeGo(toId, cb){
+  const f=document.getElementById('fade');
+  f.classList.add('out');
+  setTimeout(()=>{ showScreen(toId); cb&&cb(); setTimeout(()=>f.classList.remove('out'),50); },630);
+}
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el=document.getElementById(id); if(el) el.classList.add('active');
+  currentScreen=id;
+}
+
+/* ================================================================
+   DATA (CV + PROJECTS) — localStorage backed
+================================================================ */
+const ADMIN_PASS = "letmein"; // ← CHANGE THIS PASSWORD
+
+const DEFAULT_DATA = {
+  cv:{
+    name:"Andrew Kyle",
+    title:"Product Design Engineering Student — Manchester Metropolitan University",
+    experience:[
+      "Bartender | The Lambley, Secret Pub Company, Nottingham | May 2025 – Sept 2025: High-tempo environment managing multiple priorities; worked weddings and large functions; cash/card handling with full accuracy",
+      "Lettings Attendant | Carlton Le Willows Academy, Nottingham | Sept 2023 – Sept 2024: Solely responsible for securing entire school site and managing sports facilities; managed customer-facing café operations independently",
+      "Waiter | Tom Brown's Brasserie, Nottingham | Oct 2022 – Sept 2023: Delivered excellent customer service managing up to 50 covers simultaneously",
+      "Captain | Southwell Rugby Club | Sept 2022 – Aug 2024: Led and motivated a squad with real-time tactical decisions; clear communication and structured approach to team coordination"
+    ],
+    skills:[
+      "CAD: Fusion 360, SolidWorks — 3D modelling, assemblies, animations, technical drawings",
+      "Adobe Photoshop — Digital sketching, rendering & marketing collateral",
+      "Adobe Illustrator — Technical line drawings & 2D design files for laser cutting",
+      "Keyshot — Studio & in-situ photorealistic rendering",
+      "Prototyping & Manufacturing — Laser cutting, woodworking, spray finishing",
+      "Microsoft Office — Word, PowerPoint, Excel",
+      "Python — Self-taught via LinkedIn Learning",
+      "Full, clean UK driving licence"
+    ],
+    education:[
+      "BSc Product Design Engineering | Manchester Metropolitan University | 2024–2027 | First Year Result: 70%",
+      "A-Levels: Mathematics (B), Design & Technology (B), BTEC Sports Science (Distinction) | Carlton Le Willows Academy | 2017–2024",
+      "GCSEs: Maths (8), English Language (7), English Literature (7), Science (8), Graphics/D&T (8), Business (Distinction), Art (5)"
+    ],
+    interests:[
+      "Sports: Rugby, football, cricket, tennis — Top-200 UK ranking in table tennis (age group), competed internationally in China",
+      "Music: Passionate guitarist exploring various styles",
+      "Wild camping & outdoor activities",
+      "Sustainable fashion & entrepreneurship"
+    ]
+  },
+  projects:[
+    { emoji:"☕", title:"Design Communication — Coffee Machine", desc:"An assignment testing digital sketching, rendering and CAD skills through designing a coffee machine. Produced concept sketches, technical line drawings, studio and in-situ renders, and a final marketing poster.", tags:["Photoshop","Illustrator","Keyshot","CAD"], img:"https://andrewkyleportfolio.wordpress.com/wp-content/uploads/2026/01/coffe-machine-done-1.jpg?w=577", link:"https://andrewkyleportfolio.wordpress.com/design-communication/" },
+    { emoji:"🏰", title:"Digital Design — Medieval Playpark", desc:"A CAD assignment to design a fully functional, motorised and aesthetically pleasing piece of playpark equipment in Fusion 360. Chose a medieval theme, producing explosion animations, mechanism animations and photorealistic renders.", tags:["Fusion 360","CAD","Animation","Rendering"], img:"https://andrewkyleportfolio.wordpress.com/wp-content/uploads/2026/01/untitled.9.jpg?w=1024", link:"https://andrewkyleportfolio.wordpress.com/digital-design-project/" },
+    { emoji:"💡", title:"Lamp Design — Remote Worker Light", desc:"Prototyped and constructed a functional lamp designed specifically for remote workers. Combined research and design inspiration to meet a clear user need, documented on a dedicated project blog.", tags:["Prototyping","Research","Product Design"], img:"https://andrewkyleportfolio.wordpress.com/wp-content/uploads/2025/11/img_8417.jpg?w=1024", link:"https://andrewkyleportfolio.wordpress.com/lamp-design-project/" },
+    { emoji:"🎰", title:"Pinball Machine", desc:"Led a group of 5 to design and build a fully functional pinball machine. Responsibilities included 2D design for laser cutting, overseeing the navy blue spray-paint finish, managing assembly and coordinating electronics installation.", tags:["Laser Cutting","Woodworking","2D Design","Team Lead"], img:"https://andrewkyleportfolio.wordpress.com/wp-content/uploads/2025/11/img_4869-1.jpg?w=1024", link:"https://andrewkyleportfolio.wordpress.com/pinball-machine/" },
+    { emoji:"⚙️", title:"Other CAD Projects", desc:"A collection of CAD exercises demonstrating technical proficiency — recreating provided engineering drawings and testing specific software capabilities such as advanced features and constraints.", tags:["CAD","Technical Drawing","Fusion 360"], img:"https://andrewkyleportfolio.wordpress.com/wp-content/uploads/2025/11/eng-3.png?w=554", link:"https://andrewkyleportfolio.wordpress.com/other-cad-projects/" },
+    { emoji:"⏰", title:"Alarm Clock Redesign", desc:"A redesign project focused on reimagining an existing consumer product. Explored form, usability and aesthetics to produce an improved and contemporary alarm clock design.", tags:["Product Design","Redesign","CAD"], img:"https://andrewkyleportfolio.wordpress.com/wp-content/uploads/2025/11/acp-3.png?w=251", link:"https://andrewkyleportfolio.wordpress.com/alarm-clock-redesign-project/" }
+  ],
+  photos:[]
+};
+
+function loadData(){
+  try{ const s=localStorage.getItem('pf_data_v2'); return s?JSON.parse(s):DEFAULT_DATA; }
+  catch(e){ return DEFAULT_DATA; }
+}
+function saveDataToStorage(d){ localStorage.setItem('pf_data_v2',JSON.stringify(d)); }
+let DATA = loadData();
+
+/* ================================================================
+   RENDER CV / PROJECTS INTO WIN98 WINDOWS
+================================================================ */
+function renderCV(){
+  const el=document.getElementById('cv-content');
+  const d=DATA.cv;
+  el.innerHTML=`
+    <h2>${d.name}</h2>
+    <p><strong>${d.title}</strong></p>
+    <h2>Experience</h2><ul>${d.experience.map(e=>`<li>${e}</li>`).join('')}</ul>
+    <h2>Skills</h2><ul>${d.skills.map(s=>`<li>${s}</li>`).join('')}</ul>
+    <h2>Education</h2><ul>${d.education.map(e=>`<li>${e}</li>`).join('')}</ul>
+    <h2>Interests</h2><ul>${d.interests.map(i=>`<li>${i}</li>`).join('')}</ul>`;
+}
+
+function renderProjects(){
+  const el=document.getElementById('projects-content');
+  el.innerHTML=DATA.projects.map(p=>`
+    <div class="project-card">
+      <div class="project-card-header">${p.emoji} ${p.title}</div>
+      ${p.img?`<div class="project-card-img"><img src="${p.img}" alt="${p.title}" onerror="this.parentElement.style.display='none'"/></div>`:''}
+      <div class="project-card-body">
+        ${p.desc}<br><br>
+        ${p.tags.map(t=>`<span class="project-tag">${t}</span>`).join('')}
+        ${p.link?`<br><a href="${p.link}" target="_blank" style="font-family:Arial;font-size:clamp(6px,.8vw,9px);color:#000080;margin-top:6px;display:inline-block;">🌐 View on Portfolio →</a>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function renderPhotos(){
+  const el=document.getElementById('photos-content');
+  if(!el) return;
+  const userPhotos = DATA.photos||[];
+  const uploadedHTML = userPhotos.map((p,i)=>`
+    <div class="photo-frame" style="position:relative">
+      <div class="photo-thumb" style="background:#222;padding:0;overflow:hidden">
+        <img src="${p.src}" alt="${p.caption}" style="width:100%;height:100%;object-fit:cover;display:block"/>
+      </div>
+      <div class="photo-caption">${p.caption}</div>
+      <button onclick="deletePhoto(${i})" style="position:absolute;top:2px;right:2px;background:#c02020;color:#fff;border:none;font-size:9px;padding:1px 4px;cursor:pointer;font-family:Arial">✕</button>
+    </div>`).join('');
+  const addBtn=`<div class="photo-frame photo-add-btn" onclick="document.getElementById('photo-file-input').click()" title="Add a photo" style="cursor:pointer;opacity:.75;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+    <div class="photo-thumb" style="background:#c0c0c0;font-size:clamp(20px,2.5vw,32px);display:flex;align-items:center;justify-content:center">➕</div>
+    <div class="photo-caption">Add Photo</div>
+  </div>`;
+  el.innerHTML=`<div class="photos-grid">${uploadedHTML}${addBtn}</div>`;
+}
+
+function deletePhoto(i){
+  DATA.photos.splice(i,1);
+  saveDataToStorage(DATA);
+  renderPhotos();
+}
+
+function addPhotoFromFile(file){
+  if(!file||!file.type.startsWith('image/')) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    if(!DATA.photos) DATA.photos=[];
+    const caption=file.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ');
+    DATA.photos.push({src:e.target.result, caption});
+    saveDataToStorage(DATA);
+    renderPhotos();
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ================================================================
+   BOOT → TITLE
+================================================================ */
+let bootDone=false;
+function goToTitle(){
+  if(bootDone) return;
+  bootDone=true;
+  fadeGo('title',initTitle);
+}
+setTimeout(()=>{ try{Snd.boot();}catch(e){} },200);
+const bootTimer=setTimeout(goToTitle,4200);
+// Safety net: tapping/clicking the boot screen skips straight to the title,
+// and any uncaught error during boot also forces the transition through.
+const bootEl=document.getElementById('boot');
+if(bootEl){
+  bootEl.style.cursor='pointer';
+  bootEl.addEventListener('click',()=>{ clearTimeout(bootTimer); goToTitle(); });
+  bootEl.addEventListener('touchend',e=>{ e.preventDefault(); clearTimeout(bootTimer); goToTitle(); },{passive:false});
+}
+window.addEventListener('error',()=>{ if(currentScreen==='boot') goToTitle(); });
+
+/* ================================================================
+   TITLE SCREEN
+================================================================ */
+function initTitle(){
+  const canvas=document.getElementById('title-canvas');
+  const ctx=canvas.getContext('2d');
+  let W,H,t=0;
+  function resize(){ W=canvas.width=canvas.offsetWidth; H=canvas.height=canvas.offsetHeight; }
+  resize(); window.addEventListener('resize',resize);
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const sky=ctx.createLinearGradient(0,0,0,H*.6);
+    sky.addColorStop(0,'#04020e'); sky.addColorStop(1,'#0d0820');
+    ctx.fillStyle=sky; ctx.fillRect(0,0,W,H*.6);
+    // stars
+    [.12,.34,.56,.78,.23,.45,.67,.89,.11,.33,.55,.77,.99,.22,.44,.66,.88,.10,.32,.54].forEach((s,i)=>{
+      const x=(s*W*1.7)%W,y=(s*H*.9+i*30)%(H*.5);
+      ctx.beginPath(); ctx.arc(x,y,1+(i%3)*.5,0,Math.PI*2);
+      ctx.fillStyle=`rgba(200,220,255,${(.4+.6*Math.sin(t*.02+i))*.8})`; ctx.fill();
+    });
+    const fl=ctx.createLinearGradient(0,H*.55,0,H);
+    fl.addColorStop(0,'#2a1a0a'); fl.addColorStop(1,'#1a0e05');
+    ctx.fillStyle=fl; ctx.fillRect(0,H*.55,W,H*.45);
+    // simple bg room silhouettes
+    ctx.fillStyle='#100c1c'; ctx.fillRect(W*.1,H*.1,W*.8,H*.45);
+    // window
+    ctx.fillStyle='#0a1428'; ctx.fillRect(W*.3,H*.15,W*.4,H*.3);
+    ctx.strokeStyle='#3a3050'; ctx.lineWidth=3; ctx.strokeRect(W*.3,H*.15,W*.4,H*.3);
+    // PC glow
+    const g=ctx.createRadialGradient(W*.5,H*.3,0,W*.5,H*.3,W*.2);
+    g.addColorStop(0,`rgba(40,100,200,${.12+.04*Math.sin(t*.05)})`);
+    g.addColorStop(1,'transparent');
+    ctx.fillStyle=g; ctx.fillRect(W*.2,H*.05,W*.6,H*.5);
+    t++; requestAnimationFrame(draw);
+  }
+  draw();
+
+  function start(){
+    Snd.confirm();
+    document.removeEventListener('keydown',onKey);
+    document.getElementById('press-start').removeEventListener('click',start);
+    fadeGo('room',()=>initRoom());
+  }
+  function onKey(e){ if(e.code==='Enter'||e.code==='Space') start(); }
+  document.addEventListener('keydown',onKey);
+  const ps=document.getElementById('press-start');
+  ps.addEventListener('click',start);
+  ps.addEventListener('touchend',e=>{ e.preventDefault(); start(); },{passive:false});
+}
+
+/* ================================================================
+   GTA SA ROOM
+================================================================ */
+let roomRAF=null;
+let pcClickable=false;
+let pcBounds={ cx:0.5, cy:0.42 }; // fractional center of monitor screen
+let zoomActive=false;
+
+// Polygon fill helper
+function poly(ctx, pts, fill, stroke, sw=1){
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0],pts[0][1]);
+  for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]);
+  ctx.closePath();
+  if(fill){ ctx.fillStyle=fill; ctx.fill(); }
+  if(stroke){ ctx.strokeStyle=stroke; ctx.lineWidth=sw; ctx.stroke(); }
+}
+
+function initRoom(){
+  const canvas=document.getElementById('room-canvas');
+  const ctx=canvas.getContext('2d');
+  let W,H,t=0;
+  let hovered=false;
+  zoomActive=false;
+  pcClickable=true;
+  if(isMobile()){
+    document.getElementById('hud-item-name').textContent='Desktop PC';
+    document.getElementById('hud-hint').textContent='Tap anywhere to use';
+  }
+
+  // City window buildings — generated once
+  const BUILDINGS=[];
+  for(let i=0;i<22;i++){
+    BUILDINGS.push({
+      x: i/22 + (Math.random()-.5)*.03,
+      w: .032+Math.random()*.05,
+      h: .18+Math.random()*.52,
+      windows: Array.from({length:Math.floor(Math.random()*16+4)},()=>({
+        lit: Math.random()>.35,
+        timer: Math.random()*300
+      }))
+    });
+  }
+  // Moon
+  const MOON={ x:.72, y:.18, r:.042 };
+
+  function resize(){
+    W=canvas.width=canvas.offsetWidth;
+    H=canvas.height=canvas.offsetHeight;
+  }
+  resize(); window.addEventListener('resize',resize);
+
+  function drawRoom(zoomFrac=0){
+    ctx.clearRect(0,0,W,H);
+
+    // ── Zoom transform ──
+    if(zoomFrac>0){
+      const s = 1 + zoomFrac*14;
+      const cx=pcBounds.cx*W, cy=pcBounds.cy*H;
+      ctx.save();
+      ctx.setTransform(s,0,0,s,cx*(1-s),cy*(1-s));
+    }
+
+    // ── Vanishing point (centre of back wall) ──
+    const VPX=W*.50, VPY=H*.35;
+
+    // ── CEILING ──
+    ctx.fillStyle='#0a0812';
+    ctx.fillRect(0,0,W,H*.04);
+
+    // ── BACK WALL ──
+    ctx.fillStyle='#15111e';
+    ctx.fillRect(0,H*.04,W,VPY-H*.04+2);
+
+    // Side walls (perspective triangles)
+    poly(ctx,[[0,H*.04],[VPX,VPY],[0,H]],'#0f0c18');
+    poly(ctx,[[W,H*.04],[VPX,VPY],[W,H]],'#110e1a');
+
+    // Skirting board at floor join
+    ctx.fillStyle='#1e1828';
+    ctx.fillRect(0,VPY-2,W,H*.018);
+
+    // ── FLOOR ──
+    ctx.fillStyle='#1a1208';
+    ctx.fillRect(0,VPY,W,H-VPY);
+    // Perspective floorboard horizontals
+    for(let i=1;i<8;i++){
+      const p=i/8,fy=VPY+(H-VPY)*p;
+      ctx.beginPath();ctx.moveTo(0,fy);ctx.lineTo(W,fy);
+      ctx.strokeStyle=`rgba(50,35,12,${0.65*p})`;ctx.lineWidth=1;ctx.stroke();
+    }
+    // Perspective converging lines to VP
+    for(let i=0;i<=9;i++){
+      ctx.beginPath();ctx.moveTo(VPX,VPY);ctx.lineTo(W*i/9,H);
+      ctx.strokeStyle='rgba(35,22,5,.3)';ctx.lineWidth=.8;ctx.stroke();
+    }
+
+    // ── WINDOW (large, central, perspective back wall) ──
+    const WX=W*.20,WY=H*.06,WW=W*.60,WH=H*.27;
+    const GX=WX+W*.014,GY=WY+H*.014,GW=WW-W*.028,GH=WH-H*.028;
+
+    // Outer frame
+    ctx.fillStyle='#2c1e10';ctx.fillRect(WX,WY,WW,WH);
+    // Glass area - night sky base
+    ctx.fillStyle='#020610';ctx.fillRect(GX,GY,GW,GH);
+    // Sky gradient
+    const skyG=ctx.createLinearGradient(0,GY,0,GY+GH);
+    skyG.addColorStop(0,'rgba(2,4,18,.95)');
+    skyG.addColorStop(.65,'rgba(8,4,18,.8)');
+    skyG.addColorStop(1,'rgba(22,8,4,.55)');
+    ctx.fillStyle=skyG;ctx.fillRect(GX,GY,GW,GH);
+
+    // Stars
+    ctx.save();ctx.beginPath();ctx.rect(GX,GY,GW,GH);ctx.clip();
+    [.06,.14,.26,.37,.48,.57,.65,.73,.82,.90,.97,.02,.19,.33,.44,.61,.77,.88].forEach((sx,i)=>{
+      const starX=GX+sx*GW,starY=GY+((sx*GH*1.6+i*22)%(GH*.52));
+      const br=.3+.7*Math.sin(t*.014+i*1.5);
+      ctx.beginPath();ctx.arc(starX,starY,.7+(i%3)*.4,0,Math.PI*2);
+      ctx.fillStyle=`rgba(220,232,255,${br*.72})`;ctx.fill();
+    });
+    // Moon
+    const MX=GX+GW*.74,MY=GY+GH*.17,MR=GW*.04;
+    const moonG=ctx.createRadialGradient(MX,MY,0,MX,MY,MR);
+    moonG.addColorStop(0,'rgba(248,248,205,1)');moonG.addColorStop(.6,'rgba(220,220,170,.9)');moonG.addColorStop(1,'transparent');
+    ctx.fillStyle=moonG;ctx.beginPath();ctx.arc(MX,MY,MR*1.3,0,Math.PI*2);ctx.fill();
+    // Moon halo
+    const mhalo=ctx.createRadialGradient(MX,MY,MR,MX,MY,MR*3.2);
+    mhalo.addColorStop(0,'rgba(210,220,160,.07)');mhalo.addColorStop(1,'transparent');
+    ctx.fillStyle=mhalo;ctx.beginPath();ctx.arc(MX,MY,MR*3.2,0,Math.PI*2);ctx.fill();
+    // City buildings
+    BUILDINGS.forEach((b,bi)=>{
+      const bx=GX+b.x*GW,bw=b.w*GW,bh=b.h*GH,by=GY+GH-bh;
+      ctx.fillStyle='#07061a';ctx.fillRect(Math.round(bx),Math.round(by),Math.round(bw),Math.round(bh));
+      ctx.fillStyle='#0f0e22';ctx.fillRect(Math.round(bx),Math.round(by),Math.round(bw),2);
+      const rows=Math.max(2,Math.floor(bh/9)),cols=Math.max(1,Math.floor(bw/7));
+      b.windows.forEach((w,wi)=>{
+        if(wi>=rows*cols)return;
+        if(Math.random()<.0005)w.lit=!w.lit;
+        if(!w.lit)return;
+        const wr=Math.floor(wi/cols),wc=wi%cols;
+        const wx2=bx+wc*(bw/cols)+bw/(cols*3.5),wy2=by+wr*(bh/rows)+bh/(rows*2.5);
+        const ww2=Math.max(1.5,bw/cols*.44),wh2=Math.max(1.5,bh/rows*.4);
+        const warm=Math.random()>.62;
+        ctx.fillStyle=warm?`rgba(255,212,75,${.62+.28*Math.sin(t*.02+wi)})`:`rgba(238,244,198,${.52+.28*Math.sin(t*.03+wi)})`;
+        ctx.fillRect(Math.round(wx2),Math.round(wy2),Math.round(ww2),Math.round(wh2));
+      });
+      if(bi%4===0){ctx.strokeStyle='#181438';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(bx+bw*.5,by);ctx.lineTo(bx+bw*.5,by-GH*.052);ctx.stroke();}
+    });
+    // Horizon glow
+    const horizG=ctx.createLinearGradient(0,GY+GH*.5,0,GY+GH);
+    horizG.addColorStop(0,'transparent');horizG.addColorStop(1,'rgba(90,28,110,.32)');
+    ctx.fillStyle=horizG;ctx.fillRect(GX,GY+GH*.5,GW,GH*.5);
+    ctx.restore();
+
+    // Window frame crossbars + border
+    ctx.strokeStyle='#3a2612';ctx.lineWidth=W*.011;
+    ctx.beginPath();ctx.moveTo(WX+WW*.5,WY);ctx.lineTo(WX+WW*.5,WY+WH);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(WX,WY+WH*.5);ctx.lineTo(WX+WW,WY+WH*.5);ctx.stroke();
+    ctx.strokeStyle='#503822';ctx.lineWidth=W*.012;ctx.strokeRect(WX,WY,WW,WH);
+    ctx.strokeStyle='#604830';ctx.lineWidth=2;ctx.strokeRect(GX-2,GY-2,GW+4,GH+4);
+    // Window sill
+    poly(ctx,[[WX-W*.01,WY+WH],[WX+WW+W*.01,WY+WH],[WX+WW+W*.005,WY+WH+H*.014],[WX-W*.005,WY+WH+H*.014]],'#4a3420');
+
+    // ── DESK (perspective trapezoid) ──
+    const DBY=H*.48; // back edge y
+    const DFY=H*.68; // front edge y
+    const DBL=W*.22,DBR=W*.78; // back edge x
+    const DFL=W*.04,DFR=W*.96; // front edge x
+    const DTHK_F=H*.066,DTHK_B=H*.042;
+
+    // Desk top surface
+    const woodG=ctx.createLinearGradient(0,DBY,0,DFY);
+    woodG.addColorStop(0,'#3c2608');woodG.addColorStop(.45,'#4e3210');woodG.addColorStop(1,'#5c3e14');
+    ctx.beginPath();ctx.moveTo(DBL,DBY);ctx.lineTo(DBR,DBY);ctx.lineTo(DFR,DFY);ctx.lineTo(DFL,DFY);ctx.closePath();
+    ctx.fillStyle=woodG;ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,.18)';ctx.lineWidth=1;ctx.stroke();
+    // Wood grain
+    ctx.save();ctx.beginPath();ctx.moveTo(DBL,DBY);ctx.lineTo(DBR,DBY);ctx.lineTo(DFR,DFY);ctx.lineTo(DFL,DFY);ctx.closePath();ctx.clip();
+    for(let i=0;i<11;i++){
+      const lp=i/11;
+      const lx1=DBL+(DFL-DBL)*lp,lx2=DBR+(DFR-DBR)*lp,ly=DBY+(DFY-DBY)*lp;
+      ctx.beginPath();ctx.moveTo(lx1,ly);ctx.lineTo(lx2,ly);
+      ctx.strokeStyle=`rgba(0,0,0,${.06+.04*(i%2)})`;ctx.lineWidth=1;ctx.stroke();
+    }
+    // Back edge highlight (top surface catch-light)
+    ctx.fillStyle='rgba(255,175,60,.07)';
+    ctx.fillRect(DBL,DBY,DBR-DBL,3);
+    ctx.restore();
+
+    // Desk front face
+    const dfg=ctx.createLinearGradient(0,DFY,0,DFY+DTHK_F);
+    dfg.addColorStop(0,'#2c1a06');dfg.addColorStop(1,'#180e02');
+    ctx.beginPath();ctx.moveTo(DFL,DFY);ctx.lineTo(DFR,DFY);ctx.lineTo(DFR,DFY+DTHK_F);ctx.lineTo(DFL,DFY+DTHK_F);ctx.closePath();
+    ctx.fillStyle=dfg;ctx.fill();
+    ctx.fillStyle='rgba(255,165,50,.04)';ctx.fillRect(DFL,DFY,DFR-DFL,2);
+    ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillRect(DFL,DFY+DTHK_F-3,DFR-DFL,3);
+    // Desk back face (thin strip visible at back edge)
+    ctx.fillStyle='#200e02';ctx.fillRect(DBL,DBY+DTHK_B-5,DBR-DBL,5);
+    // Front legs
+    [[DFL+W*.04,DFY],[DFR-W*.055,DFY]].forEach(([lx,ly])=>{
+      const lw=W*.016,lh=H*.10;
+      ctx.fillStyle='#1a0e04';ctx.fillRect(Math.round(lx),Math.round(ly+DTHK_F),Math.round(lw),Math.round(lh));
+      poly(ctx,[[lx+lw,ly+DTHK_F],[lx+lw+W*.008,ly+DTHK_F-H*.004],[lx+lw+W*.008,ly+DTHK_F-H*.004+lh],[lx+lw,ly+DTHK_F+lh]],'#100802');
+    });
+
+    // ── COFFEE MUG ──
+    const MUG_X=W*.10,MUG_Y=DFY-H*.002;
+    const mugW=W*.028,mugH=H*.044;
+    ctx.fillStyle='#dcdce4';ctx.fillRect(Math.round(MUG_X),Math.round(MUG_Y-mugH),Math.round(mugW),Math.round(mugH));
+    ctx.fillStyle='#b8b8c0';ctx.fillRect(Math.round(MUG_X-1),Math.round(MUG_Y-mugH-H*.005),Math.round(mugW+2),Math.round(H*.007));
+    ctx.fillStyle='#260e04';ctx.fillRect(Math.round(MUG_X+2),Math.round(MUG_Y-mugH+2),Math.round(mugW-4),Math.round(H*.011));
+    ctx.strokeStyle='#c0c0c8';ctx.lineWidth=mugW*.22;ctx.lineCap='round';
+    ctx.beginPath();ctx.arc(MUG_X+mugW+mugW*.3,MUG_Y-mugH*.52,mugH*.22,Math.PI*.25,Math.PI*1.75);ctx.stroke();
+    ctx.lineCap='butt';
+    for(let s=0;s<2;s++){
+      const phase=t*.038+s*1.9,sx=MUG_X+mugW*(.25+s*.4);
+      const sy=MUG_Y-mugH-H*.012-Math.sin(phase)*H*.013;
+      ctx.globalAlpha=Math.max(0,.26*Math.sin(phase+1));
+      ctx.beginPath();ctx.arc(sx+Math.sin(phase)*W*.005,sy,W*.0038,0,Math.PI*2);
+      ctx.fillStyle='rgba(220,220,220,1)';ctx.fill();ctx.globalAlpha=1;
+    }
+
+    // ── MONITOR (true one-point perspective toward scene VP) ──
+    const MCX=W*.50;
+    const MBY=H*.56;
+    const MON_W=W*.30,MON_H=H*.28;
+    const MON_L=MCX-MON_W/2,MON_R=MCX+MON_W/2,MON_T=MBY-MON_H;
+    // Project any point toward the room vanishing point by depth fraction monD
+    const monD=0.24;
+    const bk=(x,y)=>[x+(VPX-x)*monD, y+(VPY-y)*monD];
+
+    // Monitor drop shadow
+    const monShd=ctx.createLinearGradient(MON_L,MBY,MON_L,MBY+H*.055);
+    monShd.addColorStop(0,'rgba(0,0,0,.5)');monShd.addColorStop(1,'transparent');
+    ctx.fillStyle=monShd;ctx.fillRect(MON_L,MBY,MON_W,H*.055);
+
+    // Stand base disc — foreshortened on desk; back edge projects toward VP
+    const sbW=W*.072,sbH=H*.016;
+    const sbBkL=bk(MCX-sbW,MBY-sbH),sbBkR=bk(MCX+sbW,MBY-sbH);
+    poly(ctx,[[MCX-sbW,MBY],[MCX+sbW,MBY],sbBkR,sbBkL],'#686860');
+    poly(ctx,[[MCX-sbW,MBY],[MCX+sbW,MBY],[MCX+sbW,MBY+H*.011],[MCX-sbW,MBY+H*.011]],'#505048');
+
+    // Neck
+    const nkW=W*.019,nkH=H*.026;
+    const crtBase=MBY-sbH-nkH;
+    const nkBR=[MCX+nkW,MBY-sbH], nkTR=[MCX+nkW,crtBase], nkTL=[MCX-nkW,crtBase];
+    const nkBR_b=bk(nkBR[0],nkBR[1]), nkTR_b=bk(nkTR[0],nkTR[1]), nkTL_b=bk(nkTL[0],nkTL[1]);
+    // Front face
+    poly(ctx,[[MCX-nkW,MBY-sbH],nkBR,nkTR,[MCX-nkW,crtBase]],'#787870');
+    // Right side — recedes toward VP
+    poly(ctx,[nkBR,nkBR_b,nkTR_b,nkTR],'#585850');
+    // Top — recedes toward VP
+    poly(ctx,[[MCX-nkW,crtBase],nkTR,nkTR_b,nkTL_b],'#989890');
+
+    // Back corners of the monitor box (perspective toward VP)
+    const bTL=bk(MON_L,MON_T), bTR=bk(MON_R,MON_T);
+    const bBL=bk(MON_L,crtBase), bBR=bk(MON_R,crtBase);
+
+    // Top face — recedes toward VP (visible because camera looks slightly down)
+    const topG=ctx.createLinearGradient(MON_L,MON_T,bTL[0],bTL[1]);
+    topG.addColorStop(0,'#c8c8b8');topG.addColorStop(1,'#a8a898');
+    poly(ctx,[[MON_L,MON_T],[MON_R,MON_T],bTR,bTL],topG);
+    poly(ctx,[[MON_L+W*.006,MON_T],[MON_R-W*.006,MON_T],
+      [bTR[0]-W*.003,bTR[1]],[bTL[0]+W*.003,bTL[1]]],'rgba(255,255,255,.07)');
+
+    // Right side face — recedes toward VP (CRT depth visible from slight left of centre)
+    const rtG=ctx.createLinearGradient(MON_R,MON_T,bTR[0],bTR[1]);
+    rtG.addColorStop(0,'#888880');rtG.addColorStop(1,'#606058');
+    poly(ctx,[[MON_R,MON_T],[MON_R,crtBase],bBR,bTR],rtG);
+    // Vent slots on right face
+    for(let v=0;v<4;v++){
+      const vfrac=.20+v*.19,vy=MON_T+(crtBase-MON_T)*vfrac,vyB=vy+H*.007;
+      poly(ctx,[[MON_R,vy],bk(MON_R,vy),bk(MON_R,vyB),[MON_R,vyB]],'rgba(0,0,0,.35)');
+    }
+
+    // Front bezel face
+    ctx.fillStyle='#9a9a8c';ctx.fillRect(Math.round(MON_L),Math.round(MON_T),Math.round(MON_W),Math.round(crtBase-MON_T));
+    // Bezel bevels for realism
+    ctx.fillStyle='rgba(255,255,255,.11)';ctx.fillRect(Math.round(MON_L),Math.round(MON_T),Math.round(MON_W),Math.round(H*.005));
+    ctx.fillStyle='rgba(255,255,255,.07)';ctx.fillRect(Math.round(MON_L),Math.round(MON_T),Math.round(W*.005),Math.round(crtBase-MON_T));
+    ctx.fillStyle='rgba(0,0,0,.16)';ctx.fillRect(Math.round(MON_R-W*.005),Math.round(MON_T),Math.round(W*.005),Math.round(crtBase-MON_T));
+    ctx.fillStyle='rgba(0,0,0,.14)';ctx.fillRect(Math.round(MON_L),Math.round(crtBase-H*.007),Math.round(MON_W),Math.round(H*.007));
+
+    // ── Screen ──
+    const SL=MON_L+W*.024,SR=MON_R-W*.024;
+    const ST=MON_T+H*.026,SB=crtBase-H*.016;
+    const scW=Math.round(SR-SL),scH=Math.round(SB-ST);
+    const tbH=Math.round(scH*.086);
+
+    // Inset shadow bevel — outer corners projected toward VP so recess reads correctly
+    const bSL=bk(SL,ST),bSR=bk(SR,ST),bSLB=bk(SL,SB),bSRB=bk(SR,SB);
+    poly(ctx,[bSL,[SL,ST],[SL,SB],bSLB],'rgba(0,0,0,.65)');        // left shadow
+    poly(ctx,[bSL,bSR,[SR,ST],[SL,ST]],'rgba(0,0,0,.65)');          // top shadow
+    poly(ctx,[[SR,ST],bSR,bSRB,[SR,SB]],'rgba(255,255,255,.06)');   // right highlight
+    poly(ctx,[[SL,SB],[SR,SB],bSRB,bSLB],'rgba(255,255,255,.04)');  // bottom highlight
+
+    // Desktop background
+    ctx.fillStyle='#007070';ctx.fillRect(Math.round(SL),Math.round(ST),scW,scH-tbH);
+    const dBg=ctx.createLinearGradient(SL,ST,SL,SB-tbH);
+    dBg.addColorStop(0,'rgba(0,28,28,.4)');dBg.addColorStop(1,'rgba(0,0,0,.1)');
+    ctx.fillStyle=dBg;ctx.fillRect(Math.round(SL),Math.round(ST),scW,scH-tbH);
+    // Taskbar
+    ctx.fillStyle='#b0b0b0';ctx.fillRect(Math.round(SL),Math.round(SB-tbH),scW,tbH);
+    ctx.fillStyle='#d0d0d0';ctx.fillRect(Math.round(SL),Math.round(SB-tbH),Math.round(scW*.16),tbH);
+    ctx.fillStyle='#383838';ctx.font=`${tbH*.62}px Arial`;ctx.textAlign='left';
+    ctx.fillText('⊞',Math.round(SL+scW*.014),Math.round(SB-tbH*.14));
+    // Desktop icons
+    ctx.save();ctx.beginPath();ctx.rect(Math.round(SL),Math.round(ST),scW,scH-tbH);ctx.clip();
+    const iS=Math.min(scW*.065,(scH-tbH)*.10);
+    ctx.font=`${iS}px serif`;ctx.textAlign='left';
+    const icX=SL+scW*.05;
+    [['📄',icX,ST+iS*1.0],['🌐',icX,ST+iS*2.3],['🏓',icX,ST+iS*3.6],['🖼️',icX,ST+iS*4.9]].forEach(([ic,ix,iy])=>ctx.fillText(ic,ix,iy));
+    ctx.restore();
+    // Phosphor glow
+    const sGlw=ctx.createRadialGradient(MCX,ST+scH*.4,0,MCX,ST+scH*.4,scW*.72);
+    sGlw.addColorStop(0,`rgba(0,148,148,${.3+.05*Math.sin(t*.04)})`);
+    sGlw.addColorStop(.5,'rgba(0,88,88,.1)');sGlw.addColorStop(1,'transparent');
+    ctx.fillStyle=sGlw;ctx.fillRect(Math.round(SL),Math.round(ST),scW,scH-tbH);
+    // Scanlines
+    for(let sl2=0;sl2<scH;sl2+=3){ctx.fillStyle='rgba(0,0,0,.07)';ctx.fillRect(Math.round(SL),Math.round(ST+sl2),scW,1);}
+    // Glass reflection
+    const glR=ctx.createLinearGradient(SL,ST,SL+scW*.65,ST+scH*.6);
+    glR.addColorStop(0,'rgba(255,255,255,.10)');glR.addColorStop(.3,'rgba(255,255,255,.04)');glR.addColorStop(1,'transparent');
+    ctx.fillStyle=glR;ctx.fillRect(Math.round(SL),Math.round(ST),scW,scH-tbH);
+    ctx.strokeStyle='rgba(255,255,255,.07)';ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(SL+scW*.04,ST+scH*.04,scW*.14,Math.PI*.9,Math.PI*1.5);ctx.stroke();
+
+    // Power LED + buttons
+    for(let b=0;b<3;b++){
+      ctx.fillStyle=b===0?`rgba(0,220,0,${.86+.12*Math.sin(t*.12)})`:'#484840';
+      ctx.beginPath();ctx.arc(MON_R-W*.022-b*W*.020,crtBase-H*.015,W*.0048,0,Math.PI*2);ctx.fill();
+    }
+    const ldX=MON_R-W*.022,ldY=crtBase-H*.015;
+    const ledGl=ctx.createRadialGradient(ldX,ldY,0,ldX,ldY,W*.019);
+    ledGl.addColorStop(0,`rgba(0,255,80,${.18+.05*Math.sin(t*.12)})`);ledGl.addColorStop(1,'transparent');
+    ctx.fillStyle=ledGl;ctx.beginPath();ctx.arc(ldX,ldY,W*.019,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#58584e';ctx.font=`bold ${W*.0068}px Arial`;ctx.textAlign='center';
+    ctx.fillText('TRINITRON',MCX,crtBase-H*.008);
+
+    // Store pcBounds — hit-detection covers full bezel, zoom targets screen centre
+    pcBounds={cx:MCX/W,cy:(ST+(SB-ST)*.45)/H,sl:MON_L/W,st:MON_T/H,sr:MON_R/W,sb:(crtBase)/H};
+
+    // ── KEYBOARD ──
+    const KW=MON_W*.92,KH=H*.042;
+    const KX=MCX-KW/2,KY=DFY-H*.048;
+    poly(ctx,[[KX,KY],[KX+KW,KY],[KX+KW-W*.007,KY-KH],[KX+W*.007,KY-KH]],'#7c7a72');
+    poly(ctx,[[KX,KY],[KX+KW,KY],[KX+KW,KY+H*.012],[KX,KY+H*.012]],'#545450');
+    ctx.fillStyle='#6a6a62';
+    for(let row=0;row<3;row++)for(let k=0;k<13;k++){
+      const kx=KX+W*.011+k*(KW-W*.022)/13,ky=KY-KH+H*.005+row*H*.011;
+      ctx.fillRect(Math.round(kx),Math.round(ky),Math.round(KW*.054),Math.round(H*.0078));
+    }
+
+    // ── MOUSE ──
+    const MSX=MCX+MON_W*.55,MSY=DFY-H*.010;
+    ctx.fillStyle='#898880';
+    ctx.beginPath();ctx.ellipse(MSX,MSY,W*.014,H*.022,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.12)';
+    ctx.beginPath();ctx.ellipse(MSX-W*.004,MSY-H*.005,W*.006,H*.008,-0.3,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#606058';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(MSX,MSY-H*.022);ctx.lineTo(MSX,MSY+H*.002);ctx.stroke();
+
+    // ── HOVER GLOW on monitor — covers full bezel ──
+    if(hovered){
+      const monCY=(MON_T+crtBase)/2;
+      const hg=ctx.createRadialGradient(MCX,monCY,0,MCX,monCY,MON_W*.8);
+      hg.addColorStop(0,'rgba(80,180,255,.18)');hg.addColorStop(1,'transparent');
+      ctx.fillStyle=hg;ctx.fillRect(Math.round(MON_L-W*.02),Math.round(MON_T-H*.02),Math.round(MON_W+W*.04),Math.round(crtBase-MON_T+H*.04));
+      ctx.strokeStyle='rgba(80,180,255,.50)';ctx.lineWidth=2;
+      ctx.strokeRect(Math.round(MON_L),Math.round(MON_T),Math.round(MON_W),Math.round(crtBase-MON_T));
+    }
+
+    // ── Ambient room darkness + screen glow ──
+    ctx.fillStyle='rgba(0,0,0,.22)';
+    ctx.fillRect(0,0,W,H);
+
+    ctx.globalCompositeOperation='lighter';
+    // PC screen cool-blue bounce light on desk/walls
+    const scrOut=ctx.createRadialGradient(MCX,ST+(SB-ST)*.4,0,MCX,ST+(SB-ST)*.4,(SR-SL)*1.4);
+    scrOut.addColorStop(0,`rgba(80,185,255,${.18+.04*Math.sin(t*.04)})`);
+    scrOut.addColorStop(.4,'rgba(40,110,210,.07)');
+    scrOut.addColorStop(1,'transparent');
+    ctx.fillStyle=scrOut;ctx.beginPath();ctx.arc(MCX,ST+(SB-ST)*.4,(SR-SL)*1.4,0,Math.PI*2);ctx.fill();
+    ctx.globalCompositeOperation='source-over';
+
+    if(zoomFrac>0) ctx.restore();
+    t++;
+  } // end drawRoom
+
+  let zoomFrac=0, zoomRAF=null;
+
+  function roomLoop(){
+    if(!zoomActive) drawRoom(0);
+    roomRAF=requestAnimationFrame(roomLoop);
+  }
+  roomLoop();
+  roomRAF && (roomAnim=roomRAF);
+
+  // ─── Mouse ───
+  canvas.addEventListener('mousemove',e=>{
+    if(zoomActive||!pcClickable) return;
+    const r=canvas.getBoundingClientRect();
+    const mx=(e.clientX-r.left)/r.width;
+    const my=(e.clientY-r.top)/r.height;
+    const inScreen=pcBounds.sl&&mx>pcBounds.sl&&mx<pcBounds.sr&&my>pcBounds.st&&my<pcBounds.sb;
+    hovered=!!inScreen;
+    canvas.style.cursor=hovered?'pointer':'default';
+    document.getElementById('hud-item-name').textContent=hovered?'Desktop PC':'';
+    document.getElementById('hud-hint').textContent=hovered?'Click to use':'';
+  });
+
+  // ─── Touch (mobile tap on monitor) ───
+  canvas.addEventListener('touchend',e=>{
+    if(zoomActive||!pcClickable) return;
+    e.preventDefault();
+    const t=e.changedTouches[0];
+    const r=canvas.getBoundingClientRect();
+    const mx=(t.clientX-r.left)/r.width;
+    const my=(t.clientY-r.top)/r.height;
+    const inScreen=pcBounds.sl&&mx>pcBounds.sl&&mx<pcBounds.sr&&my>pcBounds.st&&my<pcBounds.sb;
+    if(inScreen){
+      document.getElementById('hud-item-name').textContent='Desktop PC';
+      document.getElementById('hud-hint').textContent='Tap to use';
+      hovered=true;
+      triggerPCZoom();
+    } else {
+      // Tap anywhere on mobile triggers PC too (easier UX)
+      hovered=true;
+      triggerPCZoom();
+    }
+  },{passive:false});
+
+  function triggerPCZoom(){
+    if(!hovered||zoomActive||!pcClickable) return;
+    pcClickable=false; hovered=false; zoomActive=true;
+    Snd.confirm();
+    document.getElementById('hud-item-name').textContent='';
+    document.getElementById('hud-hint').textContent='';
+    const start=performance.now(),dur=900;
+    function zoomStep(now){
+      const p=Math.min(1,(now-start)/dur);
+      zoomFrac=1-Math.pow(1-p,3);
+      drawRoom(zoomFrac);
+      if(p<1){ zoomRAF=requestAnimationFrame(zoomStep); }
+      else { cancelAnimationFrame(roomAnim); fadeGo('pc-screen',()=>{ initPC(); renderCV(); renderProjects(); renderPhotos(); }); }
+    }
+    zoomRAF=requestAnimationFrame(zoomStep);
+  }
+
+  canvas.addEventListener('click',e=>{
+    triggerPCZoom();
+  });
+}
+
+let roomAnim=null;
+function stopRoom(){ if(roomAnim){cancelAnimationFrame(roomAnim);roomAnim=null;} }
+
+function goBackToRoom(){
+  Snd.back();
+  stopPong();
+  document.querySelectorAll('.win-window').forEach(w=>w.classList.remove('open'));
+  document.getElementById('start-menu').classList.remove('open');
+  fadeGo('room',()=>{
+    zoomActive=false;
+    initRoom();
+  });
+}
+
+/* ================================================================
+   PC / WINDOWS 98
+================================================================ */
+function initPC(){
+  updateClock();
+  const t=setInterval(updateClock,5000);
+  // store cleanup ref
+  document.getElementById('pc-back')._timer=t;
+}
+function updateClock(){
+  const n=new Date();
+  const el=document.getElementById('win-clock');
+  if(el) el.textContent=`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+}
+
+document.getElementById('pc-back').addEventListener('click',goBackToRoom);
+
+// Desktop icon — double-click on desktop, single-tap on mobile
+const isMobile=()=>('ontouchstart' in window)||window.matchMedia('(max-width:767px)').matches;
+document.querySelectorAll('.desktop-icon').forEach(icon=>{
+  let clicks=0,timer=null;
+  function activateIcon(){
+    openWin('win-'+icon.dataset.window);
+    if(icon.dataset.window==='pong') initPong();
+  }
+  icon.addEventListener('click',()=>{
+    document.querySelectorAll('.desktop-icon').forEach(i=>i.classList.remove('selected'));
+    icon.classList.add('selected'); Snd.select();
+    if(isMobile()){ activateIcon(); return; }
+    clicks++; clearTimeout(timer);
+    if(clicks>=2){ clicks=0; activateIcon(); }
+    else { timer=setTimeout(()=>{clicks=0;},380); }
+  });
+  // Touch: prevent ghost click and open immediately
+  icon.addEventListener('touchend',e=>{
+    e.preventDefault();
+    document.querySelectorAll('.desktop-icon').forEach(i=>i.classList.remove('selected'));
+    icon.classList.add('selected'); Snd.select();
+    activateIcon();
+  },{passive:false});
+});
+
+// Close buttons
+document.querySelectorAll('.win-ctrl-btn.close').forEach(btn=>{
+  if(!btn.dataset.close) return;
+  btn.addEventListener('click',()=>{
+    const w=document.getElementById('win-'+btn.dataset.close);
+    if(w) w.classList.remove('open');
+    if(btn.dataset.close==='pong') stopPong();
+    Snd.back();
+  });
+});
+
+// Start menu
+const startBtn=document.getElementById('start-btn');
+const startMenu=document.getElementById('start-menu');
+startBtn.addEventListener('click',e=>{ e.stopPropagation(); startMenu.classList.toggle('open'); Snd.select(); });
+document.addEventListener('click',()=>startMenu.classList.remove('open'));
+
+startMenu.querySelectorAll('.start-menu-item[data-window]').forEach(item=>{
+  item.addEventListener('click',e=>{ e.stopPropagation(); openWin('win-'+item.dataset.window); if(item.dataset.window==='pong') initPong(); startMenu.classList.remove('open'); });
+});
+
+document.getElementById('admin-menu-item').addEventListener('click',e=>{
+  e.stopPropagation(); startMenu.classList.remove('open'); openAdminModal();
+});
+
+function openWin(id){
+  const w=document.getElementById(id); if(w){ w.classList.add('open'); Snd.confirm(); }
+}
+
+// Draggable windows — mouse + touch
+document.querySelectorAll('.win-titlebar').forEach(tb=>{
+  let drag=false,ox=0,oy=0;
+  function startDrag(cx,cy){
+    if(!drag) return;
+    const r=tb.closest('.win-window').getBoundingClientRect();
+    ox=cx-r.left; oy=cy-r.top;
+  }
+  function moveDrag(cx,cy){
+    if(!drag) return;
+    const w=tb.closest('.win-window');
+    const pr=w.parentElement.getBoundingClientRect();
+    w.style.left=(cx-pr.left-ox)+'px';
+    w.style.top=(cy-pr.top-oy)+'px';
+  }
+  tb.addEventListener('mousedown',e=>{
+    if(e.target.classList.contains('win-ctrl-btn')) return;
+    drag=true; startDrag(e.clientX,e.clientY);
+  });
+  tb.addEventListener('touchstart',e=>{
+    if(e.target.classList.contains('win-ctrl-btn')) return;
+    drag=true; const t=e.touches[0]; startDrag(t.clientX,t.clientY);
+  },{passive:true});
+  document.addEventListener('mousemove',e=>{ moveDrag(e.clientX,e.clientY); });
+  document.addEventListener('touchmove',e=>{ if(drag){const t=e.touches[0];moveDrag(t.clientX,t.clientY);} },{passive:true});
+  document.addEventListener('mouseup',()=>drag=false);
+  document.addEventListener('touchend',()=>drag=false);
+});
+
+/* ================================================================
+   PONG
+================================================================ */
+let pongState=null;
+function initPong(){
+  const win=document.getElementById('win-pong');
+  const canvas=document.getElementById('pong-canvas');
+  const tb=win.querySelector('.win-titlebar');
+  canvas.width=win.clientWidth-4;
+  canvas.height=win.clientHeight-tb.offsetHeight-4;
+  const W=canvas.width, H=canvas.height;
+  const PW=8,PH=H*.2,BW=7;
+  const state={
+    p1:{y:H/2-PH/2,score:0},p2:{y:H/2-PH/2,score:0},
+    ball:{x:W/2,y:H/2,vx:3.5,vy:2},
+    keys:{ArrowUp:false,ArrowDown:false},
+    anim:null,running:true
+  };
+  pongState=state;
+  function kh(e){ if(['ArrowUp','ArrowDown'].includes(e.key)){state.keys[e.key]=e.type==='keydown';e.preventDefault();} }
+  document.addEventListener('keydown',kh); document.addEventListener('keyup',kh);
+  const ctx=canvas.getContext('2d');
+  function loop(){
+    if(!state.running) return;
+    if(state.keys.ArrowUp) state.p1.y=Math.max(0,state.p1.y-5);
+    if(state.keys.ArrowDown) state.p1.y=Math.min(H-PH,state.p1.y+5);
+    state.p2.y+=(state.ball.y-PH/2-state.p2.y)*.07;
+    state.p2.y=Math.max(0,Math.min(H-PH,state.p2.y));
+    state.ball.x+=state.ball.vx; state.ball.y+=state.ball.vy;
+    if(state.ball.y<=0||state.ball.y>=H-BW){state.ball.vy*=-1;Snd.pongHit();}
+    if(state.ball.x<=PW+16&&state.ball.y+BW>=state.p1.y&&state.ball.y<=state.p1.y+PH&&state.ball.vx<0){state.ball.vx*=-1.05;state.ball.vy+=(Math.random()-.5)*1.5;Snd.pongHit();}
+    if(state.ball.x+BW>=W-PW-16&&state.ball.y+BW>=state.p2.y&&state.ball.y<=state.p2.y+PH&&state.ball.vx>0){state.ball.vx*=-1.05;state.ball.vy+=(Math.random()-.5)*1.5;Snd.pongHit();}
+    state.ball.vx=Math.sign(state.ball.vx)*Math.min(Math.abs(state.ball.vx),9);
+    state.ball.vy=Math.sign(state.ball.vy)*Math.min(Math.abs(state.ball.vy),7);
+    if(state.ball.x<0){state.p2.score++;Snd.pongScore();resetBall();}
+    if(state.ball.x>W){state.p1.score++;Snd.pongScore();resetBall();}
+    function resetBall(){state.ball.x=W/2;state.ball.y=H/2;state.ball.vx=(Math.random()>.5?3.5:-3.5);state.ball.vy=(Math.random()-.5)*4;}
+    ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+    ctx.setLineDash([8,8]);ctx.beginPath();ctx.moveTo(W/2,0);ctx.lineTo(W/2,H);ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#fff';ctx.fillRect(16,state.p1.y,PW,PH);ctx.fillRect(W-PW-16,state.p2.y,PW,PH);ctx.fillRect(state.ball.x,state.ball.y,BW,BW);
+    ctx.font=`${Math.floor(H*.08)}px 'Press Start 2P',monospace`;ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,.25)';
+    ctx.fillText(state.p1.score,W*.25,H*.12);ctx.fillText(state.p2.score,W*.75,H*.12);
+    ctx.font=`${Math.floor(H*.045)}px 'Press Start 2P',monospace`;ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillText('↑↓ to move',W*.22,H*.95);
+    state.anim=requestAnimationFrame(loop);
+  }
+  loop();
+}
+function stopPong(){ if(pongState){cancelAnimationFrame(pongState.anim);pongState.running=false;pongState=null;} }
+
+/* ================================================================
+   ADMIN SYSTEM
+================================================================ */
+let adminAuth=false;
+
+function openAdminModal(){
+  document.getElementById('admin-modal').classList.add('open');
+  document.getElementById('admin-pw-screen').style.display='';
+  document.getElementById('admin-editor-screen').style.display='none';
+  document.getElementById('admin-pw-input').value='';
+  document.getElementById('admin-pw-error').textContent='';
+  adminAuth=false;
+}
+
+document.getElementById('admin-close').addEventListener('click',()=>{
+  document.getElementById('admin-modal').classList.remove('open');
+  Snd.back();
+});
+
+document.getElementById('admin-pw-btn').addEventListener('click',checkAdminPw);
+document.getElementById('admin-pw-input').addEventListener('keydown',e=>{ if(e.key==='Enter') checkAdminPw(); });
+
+function checkAdminPw(){
+  const val=document.getElementById('admin-pw-input').value;
+  if(val===ADMIN_PASS){
+    adminAuth=true;
+    document.getElementById('admin-pw-screen').style.display='none';
+    const ed=document.getElementById('admin-editor-screen');
+    ed.style.display='flex';
+    populateAdminFields();
+    Snd.confirm();
+  } else {
+    document.getElementById('admin-pw-error').textContent='Incorrect password.';
+    document.getElementById('admin-pw-input').value='';
+    Snd.back();
+  }
+}
+
+function populateAdminFields(){
+  const d=DATA;
+  document.getElementById('a-name').value=d.cv.name;
+  document.getElementById('a-title').value=d.cv.title;
+  document.getElementById('a-experience').value=d.cv.experience.join('\n');
+  document.getElementById('a-skills').value=d.cv.skills.join('\n');
+  document.getElementById('a-education').value=d.cv.education.join('\n');
+  document.getElementById('a-interests').value=d.cv.interests.join('\n');
+  renderAdminProjects();
+  renderAdminPhotos();
+}
+
+function renderAdminProjects(){
+  const el=document.getElementById('admin-projects-list');
+  el.innerHTML='';
+  DATA.projects.forEach((p,i)=>{
+    const row=document.createElement('div');
+    row.className='admin-project-row';
+    row.innerHTML=`
+      <input type="text" placeholder="Emoji" value="${p.emoji||''}" data-i="${i}" data-f="emoji" style="width:52px;margin-right:4px"/>
+      <input type="text" placeholder="Title" value="${p.title||''}" data-i="${i}" data-f="title" style="width:calc(100% - 64px)"/>
+      <textarea placeholder="Description" data-i="${i}" data-f="desc" rows="2" style="width:100%">${p.desc||''}</textarea>
+      <input type="text" placeholder="Image URL" value="${p.img||''}" data-i="${i}" data-f="img" style="width:100%"/>
+      <input type="text" placeholder="Link URL" value="${p.link||''}" data-i="${i}" data-f="link" style="width:calc(100% - 80px)"/>
+      <input type="text" placeholder="Tags (comma-separated)" value="${p.tags.join(', ')}" data-i="${i}" data-f="tags" style="width:100%"/>
+      <button class="admin-btn-small" data-del="${i}" style="float:right;margin-top:4px">✕ Remove</button>
+      <div style="clear:both"></div>`;
+    el.appendChild(row);
+  });
+  el.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ DATA.projects.splice(+btn.dataset.del,1); renderAdminProjects(); });
+  });
+}
+
+document.getElementById('admin-add-project').addEventListener('click',()=>{
+  DATA.projects.push({emoji:'🔧',title:'New Project',desc:'Description here.',tags:['Tag'],img:'',link:''});
+  renderAdminProjects();
+});
+
+function renderAdminPhotos(){
+  const el=document.getElementById('admin-photos-list');
+  if(!el) return;
+  const photos=DATA.photos||[];
+  const cntEl=document.getElementById('admin-photos-count');
+  if(cntEl) cntEl.textContent=`CURRENT PHOTOS (${photos.length} uploaded)`;
+  el.innerHTML=photos.length===0?'<span style="font-family:Arial;font-size:11px;color:#666">No photos uploaded yet.</span>':
+    photos.map((p,i)=>`
+      <div style="text-align:center;position:relative">
+        <img src="${p.src}" style="width:70px;height:52px;object-fit:cover;border:2px solid #808080;display:block"/>
+        <div style="font-family:Arial;font-size:9px;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.caption}</div>
+        <button onclick="adminDeletePhoto(${i})" style="position:absolute;top:0;right:0;background:#c02020;color:#fff;border:none;font-size:9px;padding:0 3px;cursor:pointer">✕</button>
+      </div>`).join('');
+}
+
+function adminDeletePhoto(i){ DATA.photos.splice(i,1); saveDataToStorage(DATA); renderAdminPhotos(); renderPhotos(); }
+
+document.getElementById('admin-photo-add-btn').addEventListener('click',()=>{
+  const input=document.getElementById('admin-photo-upload');
+  Array.from(input.files).forEach(file=>{
+    if(!file.type.startsWith('image/')) return;
+    const reader=new FileReader();
+    reader.onload=e=>{
+      if(!DATA.photos) DATA.photos=[];
+      const caption=file.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ');
+      DATA.photos.push({src:e.target.result,caption});
+      saveDataToStorage(DATA);
+      renderAdminPhotos(); renderPhotos();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value='';
+});
+
+// Admin tabs
+document.querySelectorAll('.admin-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.admin-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.admin-tab-content').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('admin-tab-'+tab.dataset.tab).classList.add('active');
+  });
+});
+
+document.getElementById('admin-save').addEventListener('click',()=>{
+  if(!adminAuth) return;
+  // Read CV fields
+  DATA.cv.name=document.getElementById('a-name').value;
+  DATA.cv.title=document.getElementById('a-title').value;
+  DATA.cv.experience=document.getElementById('a-experience').value.split('\n').filter(l=>l.trim());
+  DATA.cv.skills=document.getElementById('a-skills').value.split('\n').filter(l=>l.trim());
+  DATA.cv.education=document.getElementById('a-education').value.split('\n').filter(l=>l.trim());
+  DATA.cv.interests=document.getElementById('a-interests').value.split('\n').filter(l=>l.trim());
+  // Read project fields from DOM
+  document.querySelectorAll('#admin-projects-list .admin-project-row').forEach((row,i)=>{
+    if(!DATA.projects[i]) return;
+    DATA.projects[i].emoji=row.querySelector('[data-f="emoji"]').value;
+    DATA.projects[i].title=row.querySelector('[data-f="title"]').value;
+    DATA.projects[i].desc=row.querySelector('[data-f="desc"]').value;
+    DATA.projects[i].img=row.querySelector('[data-f="img"]').value;
+    DATA.projects[i].link=row.querySelector('[data-f="link"]').value;
+    DATA.projects[i].tags=row.querySelector('[data-f="tags"]').value.split(',').map(t=>t.trim()).filter(Boolean);
+  });
+  saveDataToStorage(DATA);
+  renderCV(); renderProjects(); renderPhotos();
+  const msg=document.getElementById('admin-save-msg');
+  msg.textContent='✓ Saved successfully'; Snd.confirm();
+  setTimeout(()=>msg.textContent='',2500);
+});
+
+</script>
+</body>
+</html>
