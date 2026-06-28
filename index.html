@@ -1510,8 +1510,10 @@ function initSnake(){
   }
   document.addEventListener('keydown',kh);
   let touchStart=null;
-  function ts(e){ const t=e.touches[0]; touchStart={x:t.clientX,y:t.clientY}; }
+  function ts(e){ e.preventDefault(); const t=e.touches[0]; touchStart={x:t.clientX,y:t.clientY}; }
+  function tm(e){ e.preventDefault(); }
   function te(e){
+    e.preventDefault();
     if(!touchStart) return;
     const t=e.changedTouches[0];
     const dx=t.clientX-touchStart.x, dy=t.clientY-touchStart.y;
@@ -1519,8 +1521,10 @@ function initSnake(){
     if(Math.abs(dx)>Math.abs(dy)) setDir(dx>0?1:-1,0); else setDir(0,dy>0?1:-1);
     touchStart=null;
   }
-  canvas.addEventListener('touchstart',ts,{passive:true});
-  canvas.addEventListener('touchend',te,{passive:true});
+  canvas.style.touchAction='none';
+  canvas.addEventListener('touchstart',ts,{passive:false});
+  canvas.addEventListener('touchmove',tm,{passive:false});
+  canvas.addEventListener('touchend',te,{passive:false});
   function restart(){
     state.snake=[{x:Math.floor(cols/2),y:Math.floor(rows/2)}];
     state.dir={x:1,y:0}; state.nextDir={x:1,y:0};
@@ -1529,7 +1533,7 @@ function initSnake(){
   }
   state.cleanup=()=>{
     document.removeEventListener('keydown',kh);
-    canvas.removeEventListener('touchstart',ts); canvas.removeEventListener('touchend',te);
+    canvas.removeEventListener('touchstart',ts); canvas.removeEventListener('touchmove',tm); canvas.removeEventListener('touchend',te);
   };
   function draw(){
     ctx.fillStyle='#0a0a0a'; ctx.fillRect(0,0,canvas.width,canvas.height);
