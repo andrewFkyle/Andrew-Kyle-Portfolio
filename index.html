@@ -1522,17 +1522,10 @@ function initRoom(){
     const r=canvas.getBoundingClientRect();
     const mx=(t.clientX-r.left)/r.width;
     const my=(t.clientY-r.top)/r.height;
-    const inScreen=pcBounds.sl&&mx>pcBounds.sl&&mx<pcBounds.sr&&my>pcBounds.st&&my<pcBounds.sb;
-    if(inScreen){
-      document.getElementById('hud-item-name').textContent='Desktop PC';
-      document.getElementById('hud-hint').textContent='Tap to use';
-      hovered=true;
-      triggerPCZoom();
-      return;
-    }
+    // Room props take priority — check before monitor bounds
     const obj=hitRoomObject(mx,my);
     if(obj){ obj.onActivate(); return; }
-    // Tap anywhere else on mobile triggers PC too (easier UX)
+    // Anything else taps into the PC
     hovered=true;
     triggerPCZoom();
   },{passive:false});
@@ -1589,14 +1582,13 @@ function initRoom(){
   corkboardCloseFn=closeCorkboardZoom;
 
   canvas.addEventListener('click',e=>{
-    if(roomPopupOpen) return;
-    if(!hovered){
-      const r=canvas.getBoundingClientRect();
-      const mx=(e.clientX-r.left)/r.width, my=(e.clientY-r.top)/r.height;
-      const obj=hitRoomObject(mx,my);
-      if(obj){ obj.onActivate(); return; }
-    }
-    triggerPCZoom();
+    if(roomPopupOpen||zoomActive||!pcClickable) return;
+    const r=canvas.getBoundingClientRect();
+    const mx=(e.clientX-r.left)/r.width, my=(e.clientY-r.top)/r.height;
+    // Room props take priority over monitor click
+    const obj=hitRoomObject(mx,my);
+    if(obj){ obj.onActivate(); return; }
+    if(hovered) triggerPCZoom();
   });
 }
 
