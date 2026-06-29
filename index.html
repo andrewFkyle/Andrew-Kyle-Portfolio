@@ -358,10 +358,6 @@ body { font-family:'Press Start 2P', monospace; }
               <div class="icon-img">🖼️</div>
               <div class="icon-label">My Photos</div>
             </div>
-            <div class="desktop-icon" data-window="skills">
-              <div class="icon-img">📊</div>
-              <div class="icon-label">Skills.exe</div>
-            </div>
             <div class="desktop-icon" data-window="contact">
               <div class="icon-img">✉️</div>
               <div class="icon-label">Contact Me</div>
@@ -505,7 +501,6 @@ body { font-family:'Press Start 2P', monospace; }
               <div class="start-menu" id="start-menu">
                 <div class="start-menu-item" data-window="cv">📄 My CV</div>
                 <div class="start-menu-item" data-window="browser">🌐 Projects</div>
-                <div class="start-menu-item" data-window="skills">📊 Skills.exe</div>
                 <div class="start-menu-item" data-window="contact">✉️ Contact Me</div>
                 <div class="start-menu-item" data-window="photos">🖼️ My Photos</div>
                 <div class="start-menu-item" data-window="pong">🏓 Pong.exe</div>
@@ -1277,8 +1272,8 @@ function initRoom(){
       ctx.fillRect(LX+LW2*.2,LY+LH2*(roomLightsOn?.12:.55),LW2*.6,LH2*.33);
     }
 
-    // ── COFFEE MUG ──
-    const MUG_X=W*.10,MUG_Y=DFY-H*.002;
+    // ── COFFEE MUG (top-right corner of desk, beside monitor) ──
+    const MUG_X=W*.80,MUG_Y=DFY-H*.048;
     const mugW=W*.028,mugH=H*.044;
     ctx.fillStyle='#dcdce4';ctx.fillRect(Math.round(MUG_X),Math.round(MUG_Y-mugH),Math.round(mugW),Math.round(mugH));
     ctx.fillStyle='#b8b8c0';ctx.fillRect(Math.round(MUG_X-1),Math.round(MUG_Y-mugH-H*.005),Math.round(mugW+2),Math.round(H*.007));
@@ -1425,8 +1420,8 @@ function initRoom(){
       ctx.fillRect(Math.round(kx),Math.round(ky),Math.round(KW*.054),Math.round(H*.0078));
     }
 
-    // ── MOUSE ──
-    const MSX=MCX+MON_W*.55,MSY=DFY-H*.010;
+    // ── MOUSE (right of keyboard, at keyboard depth) ──
+    const MSX=MCX+MON_W*.60,MSY=KY;
     ctx.fillStyle='#898880';
     ctx.beginPath();ctx.ellipse(MSX,MSY,W*.014,H*.022,0,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='rgba(255,255,255,.12)';
