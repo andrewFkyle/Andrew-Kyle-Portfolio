@@ -378,6 +378,10 @@ body { font-family:'Press Start 2P', monospace; }
               <div class="icon-img">🗑️</div>
               <div class="icon-label">Recycle Bin</div>
             </div>
+            <div class="desktop-icon" data-window="depop">
+              <div class="icon-img">🛍️</div>
+              <div class="icon-label">Depop</div>
+            </div>
           </div>
 
           <!-- CV Window -->
@@ -499,6 +503,18 @@ body { font-family:'Press Start 2P', monospace; }
             <div class="win-content" id="recyclebin-content" style="font-family:Arial,sans-serif;"></div>
           </div>
 
+          <!-- Depop Window -->
+          <div class="win-window" id="win-depop" style="top:6%;left:14%;width:72%;height:80%;">
+            <div class="win-titlebar">
+              <span>🛍️</span><span class="win-title-text">Depop — jt_vintage_</span>
+              <div class="win-btn-group">
+                <button class="win-ctrl-btn">─</button><button class="win-ctrl-btn">□</button>
+                <button class="win-ctrl-btn close" data-close="depop">✕</button>
+              </div>
+            </div>
+            <div class="win-content" id="depop-content"></div>
+          </div>
+
           <!-- Taskbar -->
           <div class="win-taskbar">
             <button class="win-start-btn" id="start-btn">⊞ Start
@@ -510,6 +526,7 @@ body { font-family:'Press Start 2P', monospace; }
                 <div class="start-menu-item" data-window="pong">🏓 Pong.exe</div>
                 <div class="start-menu-item" data-window="snake">🐍 Snake.exe</div>
                 <div class="start-menu-divider"></div>
+                <div class="start-menu-item" data-window="depop">🛍️ Depop Shop</div>
                 <div class="start-menu-item" data-window="mycomputer">🖥️ My Computer</div>
                 <div class="start-menu-item" data-window="recyclebin">🗑️ Recycle Bin</div>
                 <div class="start-menu-divider"></div>
@@ -549,6 +566,7 @@ body { font-family:'Press Start 2P', monospace; }
       <div class="admin-tabs">
         <div class="admin-tab active" data-tab="cv">CV</div>
         <div class="admin-tab" data-tab="projects">PROJECTS</div>
+        <div class="admin-tab" data-tab="depop">DEPOP</div>
         <div class="admin-tab" data-tab="photos">PHOTOS</div>
       </div>
       <div class="admin-body">
@@ -565,6 +583,12 @@ body { font-family:'Press Start 2P', monospace; }
         <div id="admin-tab-projects" class="admin-tab-content">
           <button class="admin-btn-add" id="admin-add-project">+ ADD PROJECT</button>
           <div id="admin-projects-list"></div>
+        </div>
+
+        <!-- Depop Tab -->
+        <div id="admin-tab-depop" class="admin-tab-content">
+          <div class="admin-field"><label>SHOP RATING (0–5)</label><input type="number" id="a-depop-rating" min="0" max="5" step="0.1"/></div>
+          <div class="admin-field"><label>REVIEW COUNT</label><input type="number" id="a-depop-reviews" min="0" step="1"/></div>
         </div>
 
         <!-- Photos Tab -->
@@ -678,7 +702,8 @@ const DEFAULT_DATA = {
     { emoji:"⏰", title:"Alarm Clock Redesign", desc:"A redesign project focused on reimagining an existing consumer product. Explored form, usability and aesthetics to produce an improved and contemporary alarm clock design.", tags:["Product Design","Redesign","CAD"], img:"https://andrewkyleportfolio.wordpress.com/wp-content/uploads/2025/11/acp-3.png?w=251", link:"https://andrewkyleportfolio.wordpress.com/alarm-clock-redesign-project/" }
   ],
   photos:[],
-  corkboard:[]
+  corkboard:[],
+  depop:{ rating:5.0, reviewCount:47 }
 };
 
 function loadData(){
@@ -799,6 +824,27 @@ function renderRecycleBin(){
     <p style="font-size:clamp(7px,.9vw,10px);color:#666;margin-bottom:10px">Early concepts and discarded iterations from the design process:</p>
     ${items.map(i=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #eee;font-size:clamp(8px,1vw,11px)"><span>🗑️</span><span style="color:#777;text-decoration:line-through">${i}</span></div>`).join('')}
     <p style="font-size:clamp(7px,.85vw,9px);color:#999;margin-top:10px;font-style:italic">Every final design started somewhere messier.</p>
+  </div>`;
+}
+
+function renderDepop(){
+  const el=document.getElementById('depop-content');
+  if(!el) return;
+  const d=DATA.depop||{rating:5.0,reviewCount:47};
+  const stars=Math.round(d.rating);
+  const starHTML='★'.repeat(stars)+'☆'.repeat(5-stars);
+  el.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:clamp(10px,2vh,22px);font-family:Arial,sans-serif;padding:clamp(12px,3vw,32px);box-sizing:border-box">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:clamp(6px,1.2vh,14px)">
+      <div style="font-size:clamp(36px,8vw,72px);line-height:1">🛍️</div>
+      <div style="font-size:clamp(14px,2.4vw,22px);font-weight:700;color:#FF2300;letter-spacing:.04em">jt_vintage_</div>
+      <div style="font-size:clamp(9px,1.2vw,12px);color:#888;letter-spacing:.08em;text-transform:uppercase">Depop Shop</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;background:#fff7f6;border:2px solid #FF2300;border-radius:12px;padding:clamp(10px,2vw,20px) clamp(18px,4vw,40px)">
+      <div style="font-size:clamp(20px,3.5vw,32px);color:#FF2300;letter-spacing:.06em">${starHTML}</div>
+      <div style="font-size:clamp(13px,2vw,18px);font-weight:700;color:#222">${d.rating.toFixed(1)} / 5.0</div>
+      <div style="font-size:clamp(9px,1.1vw,12px);color:#888">${d.reviewCount} reviews</div>
+    </div>
+    <a href="https://www.depop.com/jt_vintage_/" target="_blank" rel="noopener noreferrer" style="background:#FF2300;color:#fff;border:none;border-radius:24px;padding:clamp(8px,1.2vh,12px) clamp(20px,4vw,40px);font-size:clamp(10px,1.4vw,14px);font-weight:700;cursor:pointer;text-decoration:none;letter-spacing:.05em;display:inline-block">Visit Shop on Depop ↗</a>
   </div>`;
 }
 
@@ -1610,7 +1656,7 @@ function initRoom(){
       zoomFrac=1-Math.pow(1-p,3);
       drawRoom(zoomFrac);
       if(p<1){ zoomRAF=requestAnimationFrame(zoomStep); }
-      else { cancelAnimationFrame(roomAnim); fadeGo('pc-screen',()=>{ initPC(); renderCV(); renderProjects(); renderPhotos(); renderSkills(); renderContact(); renderMyComputer(); renderRecycleBin(); }); }
+      else { cancelAnimationFrame(roomAnim); fadeGo('pc-screen',()=>{ initPC(); renderCV(); renderProjects(); renderPhotos(); renderSkills(); renderContact(); renderMyComputer(); renderRecycleBin(); renderDepop(); }); }
     }
     zoomRAF=requestAnimationFrame(zoomStep);
   }
@@ -1976,6 +2022,9 @@ function populateAdminFields(){
   document.getElementById('a-skills').value=d.cv.skills.join('\n');
   document.getElementById('a-education').value=d.cv.education.join('\n');
   document.getElementById('a-interests').value=d.cv.interests.join('\n');
+  const dep=DATA.depop||{rating:5.0,reviewCount:47};
+  document.getElementById('a-depop-rating').value=dep.rating;
+  document.getElementById('a-depop-reviews').value=dep.reviewCount;
   renderAdminProjects();
   renderAdminPhotos();
 }
@@ -2060,6 +2109,11 @@ document.getElementById('admin-save').addEventListener('click',()=>{
   DATA.cv.skills=document.getElementById('a-skills').value.split('\n').filter(l=>l.trim());
   DATA.cv.education=document.getElementById('a-education').value.split('\n').filter(l=>l.trim());
   DATA.cv.interests=document.getElementById('a-interests').value.split('\n').filter(l=>l.trim());
+  // Read Depop fields
+  DATA.depop={
+    rating:Math.min(5,Math.max(0,parseFloat(document.getElementById('a-depop-rating').value)||5.0)),
+    reviewCount:Math.max(0,parseInt(document.getElementById('a-depop-reviews').value)||0)
+  };
   // Read project fields from DOM
   document.querySelectorAll('#admin-projects-list .admin-project-row').forEach((row,i)=>{
     if(!DATA.projects[i]) return;
