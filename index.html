@@ -61,7 +61,7 @@ body { font-family:'Press Start 2P', monospace; }
 #title-canvas { position:absolute; inset:0; width:100%; height:100%; }
 .title-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:clamp(8px,2vh,22px); cursor:pointer; user-select:none; }
 .title-eyebrow { font-size:clamp(5px,.75vw,7px); color:rgba(80,140,220,.5); letter-spacing:.55em; }
-.title-name { font-size:clamp(22px,5.5vw,66px); letter-spacing:.10em; color:#fff; text-shadow:0 0 20px rgba(60,140,255,.8),0 0 60px rgba(40,80,255,.3); animation:psGlow 4s ease-in-out infinite; }
+.title-name { font-size:clamp(22px,5.5vw,66px); letter-spacing:.10em; color:#fff; text-align:center; text-shadow:0 0 20px rgba(60,140,255,.8),0 0 60px rgba(40,80,255,.3); animation:psGlow 4s ease-in-out infinite; }
 @keyframes psGlow { 0%,100%{text-shadow:0 0 14px rgba(60,140,255,.6),0 0 40px rgba(40,80,255,.2)} 50%{text-shadow:0 0 30px rgba(80,160,255,1),0 0 80px rgba(60,100,255,.5)} }
 .title-subtitle { font-size:clamp(5px,.9vw,9px); color:#6688aa; letter-spacing:.32em; text-align:center; }
 .title-divider { width:clamp(160px,34vw,440px); height:1px; background:linear-gradient(to right,transparent,#2255cc,#88aaff,#2255cc,transparent); margin:clamp(4px,1.2vh,14px) 0; opacity:.7; }
@@ -1019,7 +1019,7 @@ document.getElementById('corkboard-file-input').addEventListener('change',functi
 
 // Fractional hit-boxes (x0,y0,x1,y1 as 0-1 fractions of canvas) for interactive room props.
 const ROOM_OBJECTS=[
-  { id:'window', label:'Window', hint:'Click to toggle day/night', x0:.20,y0:.06,x1:.80,y1:.27,
+  { id:'window', label:'Window', hint:'Click to toggle day/night', x0:.20,y0:.06,x1:.80,y1:.33,
     onActivate(){ roomDayMode=!roomDayMode; Snd.select(); } },
   { id:'corkboard', label:'Corkboard', hint:'Click to look closer', x0:.035,y0:.07,x1:.165,y1:.30,
     onActivate(){ if(corkboardZoomTrigger) corkboardZoomTrigger(); } },
@@ -1346,6 +1346,40 @@ function initRoom(){
       ctx.fillStyle='rgba(220,220,220,1)';ctx.fill();ctx.globalAlpha=1;
     }
 
+    // ── Room-prop outlines drawn HERE so monitor naturally occludes any overlap ──
+    if(hoveredRoomObj){
+      const o=hoveredRoomObj;
+      const hx=o.x0*W,hy=o.y0*H,hw=(o.x1-o.x0)*W,hh=(o.y1-o.y0)*H;
+      ctx.save();
+      ctx.shadowColor='rgba(255,210,70,.9)';ctx.shadowBlur=10;
+      ctx.strokeStyle='rgba(255,210,70,.9)';ctx.lineWidth=2;
+      ctx.strokeRect(Math.round(hx-4),Math.round(hy-4),Math.round(hw+8),Math.round(hh+8));
+      ctx.restore();
+      ctx.fillStyle='rgba(255,210,70,.07)';
+      ctx.fillRect(Math.round(hx-4),Math.round(hy-4),Math.round(hw+8),Math.round(hh+8));
+    }
+    if(roomIntroFrac>0&&!zoomActive&&pcClickable){
+      ctx.save();
+      ROOM_OBJECTS.forEach(o=>{
+        const hx=o.x0*W,hy=o.y0*H,hw=(o.x1-o.x0)*W,hh=(o.y1-o.y0)*H;
+        ctx.shadowColor=`rgba(255,210,70,${roomIntroFrac})`;ctx.shadowBlur=18;
+        ctx.strokeStyle=`rgba(255,210,70,${roomIntroFrac*.9})`;ctx.lineWidth=2;
+        ctx.strokeRect(Math.round(hx-4),Math.round(hy-4),Math.round(hw+8),Math.round(hh+8));
+      });
+      ctx.restore();
+      roomIntroFrac=Math.max(0,roomIntroFrac-1/190);
+    }
+    if(!zoomActive&&pcClickable){
+      ctx.save();
+      ctx.strokeStyle=`rgba(255,210,70,${.15+.07*Math.sin(t*.05)})`;ctx.lineWidth=1;ctx.setLineDash([4,3]);
+      ROOM_OBJECTS.forEach(o=>{
+        if(hoveredRoomObj===o) return;
+        const hx=o.x0*W,hy=o.y0*H,hw=(o.x1-o.x0)*W,hh=(o.y1-o.y0)*H;
+        ctx.strokeRect(Math.round(hx-3),Math.round(hy-3),Math.round(hw+6),Math.round(hh+6));
+      });
+      ctx.restore();
+    }
+
     // ── MONITOR (true one-point perspective toward scene VP) ──
     const MCX=W*.50;
     const MBY=H*.56;
@@ -1494,44 +1528,6 @@ function initRoom(){
       ctx.fillStyle=hg;ctx.fillRect(Math.round(MON_L-W*.02),Math.round(MON_T-H*.02),Math.round(MON_W+W*.04),Math.round(crtBase-MON_T+H*.04));
       ctx.strokeStyle='rgba(80,180,255,.50)';ctx.lineWidth=2;
       ctx.strokeRect(Math.round(MON_L),Math.round(MON_T),Math.round(MON_W),Math.round(crtBase-MON_T));
-    }
-
-    // ── HIGHLIGHT around hovered room prop ──
-    if(hoveredRoomObj){
-      const o=hoveredRoomObj;
-      const hx=o.x0*W,hy=o.y0*H,hw=(o.x1-o.x0)*W,hh=(o.y1-o.y0)*H;
-      ctx.save();
-      ctx.shadowColor='rgba(255,210,70,.9)';ctx.shadowBlur=10;
-      ctx.strokeStyle='rgba(255,210,70,.9)';ctx.lineWidth=2;
-      ctx.strokeRect(Math.round(hx-4),Math.round(hy-4),Math.round(hw+8),Math.round(hh+8));
-      ctx.restore();
-      ctx.fillStyle='rgba(255,210,70,.07)';
-      ctx.fillRect(Math.round(hx-4),Math.round(hy-4),Math.round(hw+8),Math.round(hh+8));
-    }
-
-    // ── Intro glow — bright highlight on all props, fades out over ~3 s ──
-    if(roomIntroFrac>0&&!zoomActive&&pcClickable){
-      ctx.save();
-      ROOM_OBJECTS.forEach(o=>{
-        const hx=o.x0*W,hy=o.y0*H,hw=(o.x1-o.x0)*W,hh=(o.y1-o.y0)*H;
-        ctx.shadowColor=`rgba(255,210,70,${roomIntroFrac})`;ctx.shadowBlur=18;
-        ctx.strokeStyle=`rgba(255,210,70,${roomIntroFrac*.9})`;ctx.lineWidth=2;
-        ctx.strokeRect(Math.round(hx-4),Math.round(hy-4),Math.round(hw+8),Math.round(hh+8));
-      });
-      ctx.restore();
-      roomIntroFrac=Math.max(0,roomIntroFrac-1/190);
-    }
-
-    // ── Persistent faint outline on every clickable room prop (helps discovery) ──
-    if(!zoomActive&&pcClickable){
-      ctx.save();
-      ctx.strokeStyle=`rgba(255,210,70,${.15+.07*Math.sin(t*.05)})`;ctx.lineWidth=1;ctx.setLineDash([4,3]);
-      ROOM_OBJECTS.forEach(o=>{
-        if(hoveredRoomObj===o) return;
-        const hx=o.x0*W,hy=o.y0*H,hw=(o.x1-o.x0)*W,hh=(o.y1-o.y0)*H;
-        ctx.strokeRect(Math.round(hx-3),Math.round(hy-3),Math.round(hw+6),Math.round(hh+6));
-      });
-      ctx.restore();
     }
 
     // ── Ambient room darkness + screen glow ──
