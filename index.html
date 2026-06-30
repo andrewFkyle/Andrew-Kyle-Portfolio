@@ -326,9 +326,11 @@ body { font-family:'Press Start 2P', monospace; }
         <span>📌 Corkboard</span>
         <button class="win-ctrl-btn close" id="corkboard-close">✕</button>
       </div>
-      <div class="corkboard-view-toolbar">
-        <button id="corkboard-add-btn">📌 Pin a Photo</button>
-        <input type="file" id="corkboard-file-input" accept="image/*" multiple style="display:none"/>
+      <div class="corkboard-view-toolbar" id="corkboard-toolbar">
+        <span id="corkboard-admin-btns" style="display:none">
+          <button id="corkboard-add-btn">📌 Pin Photo</button>
+          <input type="file" id="corkboard-file-input" accept="image/*" multiple style="display:none"/>
+        </span>
         <span style="margin-left:auto;color:#665;font-size:.9em">Pinned sketches &amp; project photos</span>
       </div>
       <div class="corkboard-view-body" id="corkboard-photos-content"></div>
@@ -434,11 +436,12 @@ body { font-family:'Press Start 2P', monospace; }
                 <button class="win-ctrl-btn close" data-close="photos">✕</button>
               </div>
             </div>
-            <div class="photo-toolbar">
-              <button onclick="document.getElementById('photo-file-input').click()">📁 Add Photo</button>
-              <input type="file" id="photo-file-input" accept="image/*" multiple style="display:none" onchange="Array.from(this.files).forEach(addPhotoFromFile);this.value=''"/>
-              <span style="width:1px;height:16px;background:#808080;margin:0 2px;display:inline-block"></span>
-              <span style="font-family:Arial;font-size:clamp(6px,.8vw,9px);color:#555;margin-left:auto">Photo Viewer 1.0 — click ➕ or Add Photo to upload</span>
+            <div class="photo-toolbar" id="photos-toolbar">
+              <span style="font-family:Arial;font-size:clamp(6px,.8vw,9px);color:#555">Photo Viewer 1.0</span>
+              <span id="photos-toolbar-admin" style="display:none;margin-left:8px">
+                <button onclick="document.getElementById('photo-file-input').click()">📁 Add Photo</button>
+                <input type="file" id="photo-file-input" accept="image/*" multiple style="display:none" onchange="Array.from(this.files).forEach(addPhotoFromFile);this.value=''"/>
+              </span>
             </div>
             <div class="win-content" id="photos-content" style="background:#808080;padding:0;overflow:auto;"></div>
           </div>
@@ -568,6 +571,7 @@ body { font-family:'Press Start 2P', monospace; }
         <div class="admin-tab" data-tab="projects">PROJECTS</div>
         <div class="admin-tab" data-tab="depop">DEPOP</div>
         <div class="admin-tab" data-tab="photos">PHOTOS</div>
+        <div class="admin-tab" data-tab="corkboard">BOARD</div>
       </div>
       <div class="admin-body">
         <!-- CV Tab -->
@@ -587,8 +591,12 @@ body { font-family:'Press Start 2P', monospace; }
 
         <!-- Depop Tab -->
         <div id="admin-tab-depop" class="admin-tab-content">
-          <div class="admin-field"><label>SHOP RATING (0–5)</label><input type="number" id="a-depop-rating" min="0" max="5" step="0.1"/></div>
+          <div class="admin-field"><label>PROFILE PHOTO URL</label><input type="text" id="a-depop-photo" placeholder="https://..."/></div>
+          <div class="admin-field"><label>FOLLOWERS</label><input type="number" id="a-depop-followers" min="0" step="1"/></div>
+          <div class="admin-field"><label>RATING (0–5)</label><input type="number" id="a-depop-rating" min="0" max="5" step="0.1"/></div>
           <div class="admin-field"><label>REVIEW COUNT</label><input type="number" id="a-depop-reviews" min="0" step="1"/></div>
+          <button class="admin-btn-add" id="admin-add-depop-item">+ ADD ITEM</button>
+          <div id="admin-depop-items-list"></div>
         </div>
 
         <!-- Photos Tab -->
@@ -598,6 +606,15 @@ body { font-family:'Press Start 2P', monospace; }
           <button class="admin-btn-small" id="admin-photo-add-btn" style="margin-bottom:12px">Add Selected Photos</button>
           <div style="font-family:'Press Start 2P',monospace;font-size:clamp(5px,.7vw,7px);color:#000080;margin-bottom:6px" id="admin-photos-count">CURRENT PHOTOS</div>
           <div id="admin-photos-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+        </div>
+
+        <!-- Corkboard Tab -->
+        <div id="admin-tab-corkboard" class="admin-tab-content">
+          <div style="font-family:'Press Start 2P',monospace;font-size:clamp(5px,.7vw,7px);color:#000080;margin-bottom:8px">PIN PHOTOS TO CORKBOARD</div>
+          <input type="file" id="admin-corkboard-upload" accept="image/*" multiple style="font-family:Arial;font-size:clamp(8px,1vw,11px);margin-bottom:8px"/>
+          <button class="admin-btn-small" id="admin-corkboard-add-btn" style="margin-bottom:12px">Pin Selected Photos</button>
+          <div style="font-family:'Press Start 2P',monospace;font-size:clamp(5px,.7vw,7px);color:#000080;margin-bottom:6px" id="admin-corkboard-count">PINNED PHOTOS</div>
+          <div id="admin-corkboard-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
         </div>
 
         <button class="admin-save-btn" id="admin-save">💾 SAVE CHANGES</button>
@@ -703,14 +720,39 @@ const DEFAULT_DATA = {
   ],
   photos:[],
   corkboard:[],
-  depop:{ rating:5.0, reviewCount:47 }
+  depop:{
+    rating:5.0, reviewCount:47, profilePhoto:'', followers:0,
+    items:[
+      {img:'',title:'Vintage Jacket',price:'£45',sold:true},
+      {img:'',title:'Retro Tee',price:'£18',sold:true},
+      {img:'',title:'Classic Denim',price:'£35',sold:true},
+      {img:'',title:'Vintage Shirt',price:'£22',sold:true},
+      {img:'',title:'Old School Hoodie',price:'£30',sold:true},
+      {img:'',title:'Throwback Cap',price:'£12',sold:true}
+    ]
+  }
 };
 
 function loadData(){
   try{ const s=localStorage.getItem('pf_data_v2'); return s?JSON.parse(s):DEFAULT_DATA; }
   catch(e){ return DEFAULT_DATA; }
 }
-function saveDataToStorage(d){ localStorage.setItem('pf_data_v2',JSON.stringify(d)); }
+function saveDataToStorage(d){
+  try{ localStorage.setItem('pf_data_v2',JSON.stringify(d)); }
+  catch(e){ alert('Storage full — try removing some photos first.'); }
+}
+function compressImage(file,cb){
+  const img=new Image(),url=URL.createObjectURL(file);
+  img.onload=()=>{
+    const MAX=900,sc=Math.min(1,MAX/Math.max(img.width,img.height));
+    const w=Math.round(img.width*sc),h=Math.round(img.height*sc);
+    const c=document.createElement('canvas');c.width=w;c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    URL.revokeObjectURL(url);
+    cb(c.toDataURL('image/jpeg',.82));
+  };
+  img.src=url;
+}
 let DATA = loadData();
 
 /* ================================================================
@@ -745,20 +787,24 @@ function renderProjects(){
 function renderPhotos(){
   const el=document.getElementById('photos-content');
   if(!el) return;
-  const userPhotos = DATA.photos||[];
-  const uploadedHTML = userPhotos.map((p,i)=>`
+  const tb=document.getElementById('photos-toolbar-admin');
+  if(tb) tb.style.display=adminAuth?'inline':'none';
+  const userPhotos=DATA.photos||[];
+  const uploadedHTML=userPhotos.map((p,i)=>`
     <div class="photo-frame" style="position:relative">
       <div class="photo-thumb" style="background:#222;padding:0;overflow:hidden">
         <img src="${p.src}" alt="${p.caption}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block"/>
       </div>
       <div class="photo-caption">${p.caption}</div>
-      <button onclick="deletePhoto(${i})" style="position:absolute;top:2px;right:2px;background:#c02020;color:#fff;border:none;font-size:9px;padding:1px 4px;cursor:pointer;font-family:Arial">✕</button>
+      ${adminAuth?`<button onclick="deletePhoto(${i})" style="position:absolute;top:2px;right:2px;background:#c02020;color:#fff;border:none;font-size:9px;padding:1px 4px;cursor:pointer;font-family:Arial">✕</button>`:''}
     </div>`).join('');
-  const addBtn=`<div class="photo-frame photo-add-btn" onclick="document.getElementById('photo-file-input').click()" title="Add a photo" style="cursor:pointer;opacity:.75;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+  const addBtn=adminAuth?`<div class="photo-frame photo-add-btn" onclick="document.getElementById('photo-file-input').click()" title="Add a photo" style="cursor:pointer;opacity:.75;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
     <div class="photo-thumb" style="background:#c0c0c0;font-size:clamp(20px,2.5vw,32px);display:flex;align-items:center;justify-content:center">➕</div>
     <div class="photo-caption">Add Photo</div>
-  </div>`;
-  el.innerHTML=`<div class="photos-grid">${uploadedHTML}${addBtn}</div>`;
+  </div>`:'';
+  el.innerHTML=userPhotos.length===0&&!adminAuth
+    ?`<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ccc;font-family:Arial;font-size:clamp(9px,1.2vw,13px)">No photos yet</div>`
+    :`<div class="photos-grid">${uploadedHTML}${addBtn}</div>`;
 }
 
 function renderSkills(){
@@ -830,41 +876,69 @@ function renderRecycleBin(){
 function renderDepop(){
   const el=document.getElementById('depop-content');
   if(!el) return;
-  const d=DATA.depop||{rating:5.0,reviewCount:47};
-  const stars=Math.round(d.rating);
-  const starHTML='★'.repeat(stars)+'☆'.repeat(5-stars);
-  el.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:clamp(10px,2vh,22px);font-family:Arial,sans-serif;padding:clamp(12px,3vw,32px);box-sizing:border-box">
-    <div style="display:flex;flex-direction:column;align-items:center;gap:clamp(6px,1.2vh,14px)">
-      <div style="font-size:clamp(36px,8vw,72px);line-height:1">🛍️</div>
-      <div style="font-size:clamp(14px,2.4vw,22px);font-weight:700;color:#FF2300;letter-spacing:.04em">jt_vintage_</div>
-      <div style="font-size:clamp(9px,1.2vw,12px);color:#888;letter-spacing:.08em;text-transform:uppercase">Depop Shop</div>
+  const d=DATA.depop||{rating:5.0,reviewCount:47,profilePhoto:'',followers:0,items:[]};
+  const items=d.items||[];
+  const avatar=d.profilePhoto
+    ?`<img src="${d.profilePhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`
+    :`<div style="width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#FF2300,#ff6644);display:flex;align-items:center;justify-content:center;font-size:clamp(14px,2.2vw,22px);font-weight:700;color:#fff">AK</div>`;
+  const ROTS=[-2,-1,0,1,2,-1.5,1.5,-0.5,0.5,0];
+  const itemsHTML=items.length===0
+    ?`<div style="grid-column:1/-1;text-align:center;color:#bbb;font-size:clamp(9px,1.1vw,12px);padding:24px">No items — add via admin panel</div>`
+    :items.map((it,i)=>{
+      const bg=it.img?`url(${it.img}) center/cover`:'#f0ece8';
+      const placeholder=it.img?'':`<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:#ccc;font-size:clamp(18px,2.5vw,28px)">🛍️</div>`;
+      const sold=it.sold?`<div style="position:absolute;inset:0;background:rgba(0,0,0,.38);display:flex;align-items:center;justify-content:center"><span style="background:#FF2300;color:#fff;font-size:clamp(7px,1vw,10px);font-weight:700;padding:2px 7px;border-radius:2px;letter-spacing:.1em">SOLD</span></div>`:'';
+      return `<div style="display:flex;flex-direction:column;cursor:default">
+        <div style="position:relative;aspect-ratio:1;background:${bg};border-radius:6px;overflow:hidden">
+          ${placeholder}${sold}
+        </div>
+        <div style="margin-top:4px;font-size:clamp(7px,.95vw,10px);color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.title||''}</div>
+        <div style="font-size:clamp(8px,1.05vw,11px);font-weight:700;color:#111">${it.price||''}</div>
+      </div>`;
+    }).join('');
+  el.innerHTML=`<div style="display:flex;flex-direction:column;height:100%;font-family:Arial,sans-serif;background:#fafafa;overflow:hidden">
+    <div style="background:#FF2300;padding:clamp(10px,1.8vh,18px) clamp(12px,2vw,22px);display:flex;align-items:center;gap:clamp(10px,1.8vw,18px);flex-shrink:0">
+      <div style="width:clamp(40px,6.5vw,60px);height:clamp(40px,6.5vw,60px);border-radius:50%;border:2px solid rgba(255,255,255,.7);overflow:hidden;flex-shrink:0">${avatar}</div>
+      <div style="flex:1;min-width:0">
+        <div style="color:#fff;font-weight:700;font-size:clamp(12px,2vw,18px);line-height:1.2">jt_vintage_</div>
+        <div style="display:flex;flex-wrap:wrap;gap:clamp(6px,1vw,12px);margin-top:3px">
+          <span style="color:rgba(255,255,255,.9);font-size:clamp(8px,1vw,11px)">⭐ ${d.rating.toFixed(1)} · ${d.reviewCount} reviews</span>
+          ${d.followers?`<span style="color:rgba(255,255,255,.8);font-size:clamp(7px,.9vw,10px)">${d.followers} followers</span>`:''}
+        </div>
+      </div>
+      <a href="https://www.depop.com/jt_vintage_/" target="_blank" rel="noopener noreferrer" style="background:#fff;color:#FF2300;font-weight:700;font-size:clamp(8px,1vw,11px);padding:clamp(5px,.7vh,8px) clamp(10px,1.4vw,16px);border-radius:20px;text-decoration:none;white-space:nowrap;flex-shrink:0">Visit Shop ↗</a>
     </div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;background:#fff7f6;border:2px solid #FF2300;border-radius:12px;padding:clamp(10px,2vw,20px) clamp(18px,4vw,40px)">
-      <div style="font-size:clamp(20px,3.5vw,32px);color:#FF2300;letter-spacing:.06em">${starHTML}</div>
-      <div style="font-size:clamp(13px,2vw,18px);font-weight:700;color:#222">${d.rating.toFixed(1)} / 5.0</div>
-      <div style="font-size:clamp(9px,1.1vw,12px);color:#888">${d.reviewCount} reviews</div>
+    <div style="flex:1;overflow-y:auto;padding:clamp(8px,1.2vw,14px)">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(clamp(75px,11vw,120px),1fr));gap:clamp(5px,.8vw,10px)">
+        ${itemsHTML}
+      </div>
     </div>
-    <a href="https://www.depop.com/jt_vintage_/" target="_blank" rel="noopener noreferrer" style="background:#FF2300;color:#fff;border:none;border-radius:24px;padding:clamp(8px,1.2vh,12px) clamp(20px,4vw,40px);font-size:clamp(10px,1.4vw,14px);font-weight:700;cursor:pointer;text-decoration:none;letter-spacing:.05em;display:inline-block">Visit Shop on Depop ↗</a>
   </div>`;
 }
 
 function renderCorkboard(){
   const el=document.getElementById('corkboard-photos-content');
   if(!el) return;
+  const adminBtns=document.getElementById('corkboard-admin-btns');
+  if(adminBtns) adminBtns.style.display=adminAuth?'inline':'none';
   const pinned=DATA.corkboard||[];
-  const pinnedHTML=pinned.map((p,i)=>`
-    <div class="photo-frame" style="position:relative">
-      <div class="photo-thumb" style="background:#222;padding:0;overflow:hidden">
-        <img src="${p.src}" alt="${p.caption}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block"/>
+  const ROTATIONS=[-3,-1.5,0,1.5,2.5,-2,1,-1,3,0.5];
+  const pinnedHTML=pinned.length===0
+    ?`<div style="grid-column:1/-1;text-align:center;color:rgba(80,50,20,.45);font-family:Arial;font-size:clamp(9px,1.3vw,13px);padding:30px 0;font-style:italic">No photos pinned yet</div>`
+    :pinned.map((p,i)=>`
+    <div style="position:relative;transform:rotate(${ROTATIONS[i%ROTATIONS.length]}deg);cursor:default">
+      <div style="background:#fff;padding:6px 6px 22px;box-shadow:2px 3px 8px rgba(0,0,0,.4)">
+        <div style="width:clamp(80px,11vw,130px);height:clamp(60px,8.5vw,100px);overflow:hidden;background:#222">
+          <img src="${p.src}" alt="${p.caption}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block"/>
+        </div>
+        <div style="font-family:Arial;font-size:clamp(5px,.75vw,8px);text-align:center;color:#444;margin-top:4px;white-space:nowrap;overflow:hidden;max-width:100%">${p.caption}</div>
       </div>
-      <div class="photo-caption">${p.caption}</div>
-      <button onclick="deleteCorkboardPhoto(${i})" style="position:absolute;top:2px;right:2px;background:#c02020;color:#fff;border:none;font-size:9px;padding:1px 4px;cursor:pointer;font-family:Arial">✕</button>
+      <div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#e04040,#8b1010);box-shadow:0 1px 3px rgba(0,0,0,.5)"></div>
+      ${adminAuth?`<button onclick="deleteCorkboardPhoto(${i})" style="position:absolute;top:0;right:0;background:#c02020;color:#fff;border:none;font-size:8px;padding:1px 4px;cursor:pointer;font-family:Arial;z-index:2">✕</button>`:''}
     </div>`).join('');
-  const addBtn=`<div class="photo-frame photo-add-btn" onclick="document.getElementById('corkboard-file-input').click()" title="Pin a photo" style="cursor:pointer;opacity:.75;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
-    <div class="photo-thumb" style="background:#c0c0c0;font-size:clamp(20px,2.5vw,32px);display:flex;align-items:center;justify-content:center">📌</div>
-    <div class="photo-caption">Pin Photo</div>
-  </div>`;
-  el.innerHTML=`<div class="photos-grid">${pinnedHTML}${addBtn}</div>`;
+  el.style.background='#b5813a url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'80\' height=\'80\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'18\' fill=\'none\' stroke=\'rgba(0,0,0,.04)\' stroke-width=\'1\'/%3E%3Ccircle cx=\'60\' cy=\'60\' r=\'14\' fill=\'none\' stroke=\'rgba(255,255,255,.05)\' stroke-width=\'1\'/%3E%3C/svg%3E")';
+  el.style.padding='clamp(16px,2.5vw,28px)';
+  el.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:clamp(14px,2.5vw,28px);align-content:flex-start">${pinnedHTML}</div>`;
 }
 function deleteCorkboardPhoto(i){
   DATA.corkboard.splice(i,1);
@@ -873,15 +947,14 @@ function deleteCorkboardPhoto(i){
 }
 function addCorkboardPhotoFromFile(file){
   if(!file||!file.type.startsWith('image/')) return;
-  const reader=new FileReader();
-  reader.onload=e=>{
+  const caption=file.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ');
+  compressImage(file,src=>{
     if(!DATA.corkboard) DATA.corkboard=[];
-    const caption=file.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ');
-    DATA.corkboard.push({src:e.target.result, caption});
+    DATA.corkboard.push({src,caption});
     saveDataToStorage(DATA);
     renderCorkboard();
-  };
-  reader.readAsDataURL(file);
+    renderAdminCorkboard();
+  });
 }
 
 function deletePhoto(i){
@@ -892,15 +965,14 @@ function deletePhoto(i){
 
 function addPhotoFromFile(file){
   if(!file||!file.type.startsWith('image/')) return;
-  const reader=new FileReader();
-  reader.onload=e=>{
+  const caption=file.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ');
+  compressImage(file,src=>{
     if(!DATA.photos) DATA.photos=[];
-    const caption=file.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ');
-    DATA.photos.push({src:e.target.result, caption});
+    DATA.photos.push({src,caption});
     saveDataToStorage(DATA);
     renderPhotos();
-  };
-  reader.readAsDataURL(file);
+    renderAdminPhotos();
+  });
 }
 
 /* ================================================================
@@ -2006,6 +2078,7 @@ function checkAdminPw(){
     const ed=document.getElementById('admin-editor-screen');
     ed.style.display='flex';
     populateAdminFields();
+    renderPhotos();
     Snd.confirm();
   } else {
     document.getElementById('admin-pw-error').textContent='Incorrect password.';
@@ -2022,9 +2095,13 @@ function populateAdminFields(){
   document.getElementById('a-skills').value=d.cv.skills.join('\n');
   document.getElementById('a-education').value=d.cv.education.join('\n');
   document.getElementById('a-interests').value=d.cv.interests.join('\n');
-  const dep=DATA.depop||{rating:5.0,reviewCount:47};
+  const dep=DATA.depop||{rating:5.0,reviewCount:47,profilePhoto:'',followers:0,items:[]};
+  document.getElementById('a-depop-photo').value=dep.profilePhoto||'';
+  document.getElementById('a-depop-followers').value=dep.followers||0;
   document.getElementById('a-depop-rating').value=dep.rating;
   document.getElementById('a-depop-reviews').value=dep.reviewCount;
+  renderAdminDepopItems();
+  renderAdminCorkboard();
   renderAdminProjects();
   renderAdminPhotos();
 }
@@ -2075,18 +2152,63 @@ function adminDeletePhoto(i){ DATA.photos.splice(i,1); saveDataToStorage(DATA); 
 
 document.getElementById('admin-photo-add-btn').addEventListener('click',()=>{
   const input=document.getElementById('admin-photo-upload');
-  Array.from(input.files).forEach(file=>{
-    if(!file.type.startsWith('image/')) return;
-    const reader=new FileReader();
-    reader.onload=e=>{
-      if(!DATA.photos) DATA.photos=[];
-      const caption=file.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ');
-      DATA.photos.push({src:e.target.result,caption});
-      saveDataToStorage(DATA);
-      renderAdminPhotos(); renderPhotos();
-    };
-    reader.readAsDataURL(file);
-  });
+  Array.from(input.files).forEach(f=>addPhotoFromFile(f));
+  input.value='';
+});
+
+function renderAdminDepopItems(){
+  const el=document.getElementById('admin-depop-items-list');
+  if(!el) return;
+  const items=(DATA.depop&&DATA.depop.items)||[];
+  if(items.length===0){el.innerHTML='<div style="font-family:Arial;font-size:11px;color:#666;margin-top:6px">No items yet — click + ADD ITEM</div>';return;}
+  el.innerHTML=items.map((it,i)=>`
+    <div class="admin-depop-row" style="border:1px solid #c0c0c0;padding:6px;margin-top:6px;background:#f8f8f8">
+      <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+        <input data-f="title" value="${it.title||''}" placeholder="Title" style="flex:2;min-width:80px;font-family:Arial;font-size:10px;padding:3px"/>
+        <input data-f="price" value="${it.price||''}" placeholder="£0" style="width:50px;font-family:Arial;font-size:10px;padding:3px"/>
+        <label style="font-family:Arial;font-size:10px;display:flex;align-items:center;gap:3px"><input type="checkbox" data-f="sold" ${it.sold?'checked':''}/> Sold</label>
+        <button onclick="adminDeleteDepopItem(${i})" style="background:#c02020;color:#fff;border:none;font-size:9px;padding:2px 5px;cursor:pointer">✕</button>
+      </div>
+      <input data-f="img" value="${it.img||''}" placeholder="Image URL (https://...)" style="width:100%;margin-top:4px;font-family:Arial;font-size:9px;padding:3px;box-sizing:border-box"/>
+    </div>`).join('');
+}
+function adminDeleteDepopItem(i){
+  if(!DATA.depop||!DATA.depop.items) return;
+  DATA.depop.items.splice(i,1);
+  saveDataToStorage(DATA);
+  renderAdminDepopItems();
+  renderDepop();
+}
+document.getElementById('admin-add-depop-item').addEventListener('click',()=>{
+  if(!DATA.depop) DATA.depop={rating:5,reviewCount:0,profilePhoto:'',followers:0,items:[]};
+  if(!DATA.depop.items) DATA.depop.items=[];
+  DATA.depop.items.push({img:'',title:'New Item',price:'£0',sold:false});
+  renderAdminDepopItems();
+});
+
+function renderAdminCorkboard(){
+  const el=document.getElementById('admin-corkboard-list');
+  if(!el) return;
+  const pins=DATA.corkboard||[];
+  const cntEl=document.getElementById('admin-corkboard-count');
+  if(cntEl) cntEl.textContent=`PINNED PHOTOS (${pins.length})`;
+  el.innerHTML=pins.length===0?'<span style="font-family:Arial;font-size:11px;color:#666">No photos pinned yet.</span>':
+    pins.map((p,i)=>`
+      <div style="text-align:center;position:relative">
+        <img src="${p.src}" style="width:70px;height:52px;object-fit:cover;border:2px solid #808080;display:block"/>
+        <div style="font-family:Arial;font-size:9px;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.caption}</div>
+        <button onclick="adminDeleteCorkboard(${i})" style="position:absolute;top:0;right:0;background:#c02020;color:#fff;border:none;font-size:9px;padding:0 3px;cursor:pointer">✕</button>
+      </div>`).join('');
+}
+function adminDeleteCorkboard(i){
+  DATA.corkboard.splice(i,1);
+  saveDataToStorage(DATA);
+  renderAdminCorkboard();
+  renderCorkboard();
+}
+document.getElementById('admin-corkboard-add-btn').addEventListener('click',()=>{
+  const input=document.getElementById('admin-corkboard-upload');
+  Array.from(input.files).forEach(f=>addCorkboardPhotoFromFile(f));
   input.value='';
 });
 
@@ -2110,9 +2232,21 @@ document.getElementById('admin-save').addEventListener('click',()=>{
   DATA.cv.education=document.getElementById('a-education').value.split('\n').filter(l=>l.trim());
   DATA.cv.interests=document.getElementById('a-interests').value.split('\n').filter(l=>l.trim());
   // Read Depop fields
+  const depItems=[];
+  document.querySelectorAll('#admin-depop-items-list .admin-depop-row').forEach(row=>{
+    depItems.push({
+      img:row.querySelector('[data-f="img"]').value.trim(),
+      title:row.querySelector('[data-f="title"]').value,
+      price:row.querySelector('[data-f="price"]').value,
+      sold:row.querySelector('[data-f="sold"]').checked
+    });
+  });
   DATA.depop={
+    profilePhoto:document.getElementById('a-depop-photo').value.trim(),
+    followers:Math.max(0,parseInt(document.getElementById('a-depop-followers').value)||0),
     rating:Math.min(5,Math.max(0,parseFloat(document.getElementById('a-depop-rating').value)||5.0)),
-    reviewCount:Math.max(0,parseInt(document.getElementById('a-depop-reviews').value)||0)
+    reviewCount:Math.max(0,parseInt(document.getElementById('a-depop-reviews').value)||0),
+    items:depItems
   };
   // Read project fields from DOM
   document.querySelectorAll('#admin-projects-list .admin-project-row').forEach((row,i)=>{
@@ -2125,7 +2259,7 @@ document.getElementById('admin-save').addEventListener('click',()=>{
     DATA.projects[i].tags=row.querySelector('[data-f="tags"]').value.split(',').map(t=>t.trim()).filter(Boolean);
   });
   saveDataToStorage(DATA);
-  renderCV(); renderProjects(); renderPhotos();
+  renderCV(); renderProjects(); renderPhotos(); renderDepop(); renderCorkboard();
   const msg=document.getElementById('admin-save-msg');
   msg.textContent='✓ Saved successfully'; Snd.confirm();
   setTimeout(()=>msg.textContent='',2500);
