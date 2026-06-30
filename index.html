@@ -57,20 +57,20 @@ body { font-family:'Press Start 2P', monospace; }
 @keyframes barP { 0%,100%{opacity:.3;transform:scaleY(.6)} 50%{opacity:1;transform:scaleY(1)} }
 
 /* ============================================================ TITLE */
-#title { background:#050010; overflow:hidden; }
+#title { background:#000408; overflow:hidden; }
 #title-canvas { position:absolute; inset:0; width:100%; height:100%; }
 .title-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:clamp(8px,2vh,22px); cursor:pointer; user-select:none; }
-.title-eyebrow { font-size:clamp(5px,.75vw,7px); color:rgba(0,255,255,.5); letter-spacing:.55em; }
-.title-name { font-size:clamp(22px,5.5vw,66px); letter-spacing:.10em; background:linear-gradient(180deg,#fff 0%,#ffaaee 28%,#ff44cc 58%,#aa0077 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; filter:drop-shadow(0 0 18px rgba(255,0,180,.75)) drop-shadow(0 0 50px rgba(180,0,255,.3)); animation:vaporGlow 3s ease-in-out infinite; }
-@keyframes vaporGlow { 0%,100%{filter:drop-shadow(0 0 12px rgba(255,0,180,.6)) drop-shadow(0 0 30px rgba(180,0,255,.2))} 50%{filter:drop-shadow(0 0 26px rgba(255,0,200,1)) drop-shadow(0 0 70px rgba(200,0,255,.6))} }
-.title-subtitle { font-size:clamp(5px,.9vw,9px); color:#00ffff; letter-spacing:.32em; text-align:center; text-shadow:0 0 12px rgba(0,255,255,.6); }
-.title-divider { width:clamp(160px,34vw,440px); height:1px; background:linear-gradient(to right,transparent,#ff00ff,#00ffff,#ff00ff,transparent); margin:clamp(4px,1.2vh,14px) 0; box-shadow:0 0 8px rgba(255,0,255,.5); }
-.press-start { font-size:clamp(8px,1.4vw,13px); color:#00ffff; animation:blink 1.1s step-end infinite; cursor:pointer; text-shadow:0 0 14px rgba(0,255,255,.9); letter-spacing:.18em; border:1px solid rgba(0,255,255,.35); padding:clamp(5px,1vh,10px) clamp(10px,1.8vw,22px); }
+.title-eyebrow { font-size:clamp(5px,.75vw,7px); color:rgba(80,140,220,.5); letter-spacing:.55em; }
+.title-name { font-size:clamp(22px,5.5vw,66px); letter-spacing:.10em; color:#fff; text-shadow:0 0 20px rgba(60,140,255,.8),0 0 60px rgba(40,80,255,.3); animation:psGlow 4s ease-in-out infinite; }
+@keyframes psGlow { 0%,100%{text-shadow:0 0 14px rgba(60,140,255,.6),0 0 40px rgba(40,80,255,.2)} 50%{text-shadow:0 0 30px rgba(80,160,255,1),0 0 80px rgba(60,100,255,.5)} }
+.title-subtitle { font-size:clamp(5px,.9vw,9px); color:#6688aa; letter-spacing:.32em; text-align:center; }
+.title-divider { width:clamp(160px,34vw,440px); height:1px; background:linear-gradient(to right,transparent,#2255cc,#88aaff,#2255cc,transparent); margin:clamp(4px,1.2vh,14px) 0; opacity:.7; }
+.press-start { font-size:clamp(8px,1.4vw,13px); color:#fff; animation:blink 1.1s step-end infinite; cursor:pointer; text-shadow:0 0 12px rgba(100,180,255,.7); letter-spacing:.15em; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-.title-hud { position:absolute; bottom:4vh; right:4vw; display:flex; align-items:center; gap:12px; font-size:clamp(5px,.9vw,8px); color:#ff00ff; text-shadow:0 0 6px rgba(255,0,255,.5); }
-.mem-card-icon { width:clamp(18px,2vw,26px); height:clamp(26px,3vw,36px); background:#1a0030; border-radius:3px; border:1px solid rgba(255,0,255,.4); position:relative; overflow:hidden; }
-.mem-card-icon::before { content:''; position:absolute; top:3px; left:3px; right:3px; height:4px; background:#ff00ff; border-radius:1px; }
-.mem-card-icon::after { content:'MC'; position:absolute; bottom:4px; left:0; right:0; text-align:center; font-family:'Press Start 2P',monospace; font-size:5px; color:#ff00ff; }
+.title-hud { position:absolute; bottom:4vh; right:4vw; display:flex; align-items:center; gap:12px; font-size:clamp(5px,.9vw,8px); color:#334466; }
+.mem-card-icon { width:clamp(18px,2vw,26px); height:clamp(26px,3vw,36px); background:#020810; border-radius:3px; border:1px solid #112244; position:relative; overflow:hidden; }
+.mem-card-icon::before { content:''; position:absolute; top:3px; left:3px; right:3px; height:4px; background:#2255cc; border-radius:1px; }
+.mem-card-icon::after { content:'MC'; position:absolute; bottom:4px; left:0; right:0; text-align:center; font-family:'Press Start 2P',monospace; font-size:5px; color:#2255cc; }
 
 /* ============================================================ ROOM */
 #room { background:#000; }
@@ -890,92 +890,70 @@ function initTitle(){
   function debouncedResize(){ if(resizeRAF) return; resizeRAF=requestAnimationFrame(()=>{ resize(); resizeRAF=null; }); }
   resize(); window.addEventListener('resize',debouncedResize);
 
-  // Precompute star positions (deterministic, no per-frame random)
-  const STARS=Array.from({length:55},(_,i)=>({
+  // Precompute tower and particle data (deterministic)
+  const TOWERS=Array.from({length:28},(_,i)=>({
+    phase: i*0.7853,
+    freq:  0.013+(i%5)*0.006,
+    base:  0.04+(i%9)*0.032
+  }));
+  const PARTICLES=Array.from({length:38},(_,i)=>({
     x:(i*0.6180339887)%1,
-    y:(i*0.3819660113+0.05)%0.90,
-    r:0.6+(i%3)*0.45
+    y:(i*0.3819660113+0.04)%0.96,
+    r:0.5+(i%3)*0.35
   }));
 
   function draw(){
     ctx.clearRect(0,0,W,H);
-    const HZ=H*.50;
 
-    // ── Sky ──
-    const sky=ctx.createLinearGradient(0,0,0,HZ);
-    sky.addColorStop(0,'#050010');
-    sky.addColorStop(.45,'#1a0038');
-    sky.addColorStop(.78,'#4d0060');
-    sky.addColorStop(1,'#8b1090');
-    ctx.fillStyle=sky; ctx.fillRect(0,0,W,HZ+2);
+    // ── Deep space background ──
+    const bg=ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#000408');
+    bg.addColorStop(.55,'#000c1a');
+    bg.addColorStop(1,'#00060e');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
 
-    // ── Stars ──
-    STARS.forEach((s,i)=>{
-      const br=.35+.65*Math.sin(t*.022+i*1.37);
-      ctx.beginPath(); ctx.arc(s.x*W,s.y*HZ*.92,s.r,0,Math.PI*2);
-      ctx.fillStyle=`rgba(255,210,255,${br*.85})`; ctx.fill();
+    // ── Sparse floating particles ──
+    PARTICLES.forEach((p,i)=>{
+      const br=.12+.18*Math.sin(t*.016+i*1.9);
+      ctx.beginPath(); ctx.arc(p.x*W,p.y*H,p.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(100,160,255,${br})`; ctx.fill();
     });
 
-    // ── Retro sun ──
-    const SX=W*.5,SY=HZ,SR=Math.min(W*.22,H*.28);
-    const sunG=ctx.createLinearGradient(SX,SY-SR,SX,SY);
-    sunG.addColorStop(0,'#ffe0ff');
-    sunG.addColorStop(.25,'#ff88dd');
-    sunG.addColorStop(.55,'#ff00aa');
-    sunG.addColorStop(.85,'#cc0066');
-    sunG.addColorStop(1,'#880044');
-    ctx.beginPath(); ctx.arc(SX,SY,SR,Math.PI,0);
-    ctx.fillStyle=sunG; ctx.fill();
-    // Horizontal band cuts
-    ctx.save(); ctx.beginPath(); ctx.arc(SX,SY,SR,Math.PI,0); ctx.clip();
-    for(let b=0;b<9;b++){
-      const frac=b/9;
-      const by=SY-SR+frac*SR;
-      ctx.fillStyle='rgba(4,0,15,.62)';
-      ctx.fillRect(SX-SR,by+SR/9*.5,SR*2,SR/9*.46);
-    }
-    ctx.restore();
-    // Sun halo
-    const sHalo=ctx.createRadialGradient(SX,SY,SR*.5,SX,SY,SR*2.6);
-    sHalo.addColorStop(0,'rgba(255,0,160,.15)'); sHalo.addColorStop(1,'transparent');
-    ctx.fillStyle=sHalo; ctx.beginPath(); ctx.arc(SX,SY,SR*2.6,0,Math.PI*2); ctx.fill();
+    // ── Atmospheric centre glow ──
+    const ag=ctx.createRadialGradient(W*.5,H*.44,0,W*.5,H*.44,W*.55);
+    ag.addColorStop(0,`rgba(10,40,140,${.07+.03*Math.sin(t*.018)})`);
+    ag.addColorStop(1,'transparent');
+    ctx.fillStyle=ag; ctx.fillRect(0,0,W,H);
 
-    // ── Horizon glow ──
-    const hg=ctx.createLinearGradient(0,HZ-H*.05,0,HZ+H*.05);
-    hg.addColorStop(0,'transparent'); hg.addColorStop(.5,'rgba(255,0,200,.25)'); hg.addColorStop(1,'transparent');
-    ctx.fillStyle=hg; ctx.fillRect(0,HZ-H*.05,W,H*.10);
+    // ── Data towers (PS2 memory-card visualisation) ──
+    const floor=H*.84, maxH=H*.32, areaX=W*.08, areaW=W*.84;
+    const bw=areaW/TOWERS.length;
+    TOWERS.forEach((tw,i)=>{
+      const bh=(tw.base+.10*Math.sin(t*tw.freq+tw.phase))*maxH;
+      const bx=areaX+i*bw;
+      const by=floor-bh;
+      const tg=ctx.createLinearGradient(0,by,0,floor);
+      tg.addColorStop(0,`rgba(80,160,255,${.65+.22*Math.sin(t*tw.freq+tw.phase)})`);
+      tg.addColorStop(.4,'rgba(20,70,200,.5)');
+      tg.addColorStop(1,'rgba(0,8,30,.2)');
+      ctx.fillStyle=tg;
+      ctx.fillRect(Math.round(bx+.5),Math.round(by),Math.round(bw-1.5),Math.round(bh));
+    });
 
-    // ── Floor ──
-    const flG=ctx.createLinearGradient(0,HZ,0,H);
-    flG.addColorStop(0,'#150020'); flG.addColorStop(.5,'#0a0015'); flG.addColorStop(1,'#04000c');
-    ctx.fillStyle=flG; ctx.fillRect(0,HZ,W,H-HZ);
+    // ── Scan beam sweeping across towers ──
+    const scanFrac=(Math.sin(t*.016)+1)/2;
+    const scanY=floor-maxH*(.15+.75*scanFrac);
+    const sg=ctx.createLinearGradient(0,scanY-5,0,scanY+5);
+    sg.addColorStop(0,'transparent');
+    sg.addColorStop(.5,`rgba(160,210,255,${.45+.15*Math.sin(t*.04)})`);
+    sg.addColorStop(1,'transparent');
+    ctx.fillStyle=sg; ctx.fillRect(areaX,scanY-5,areaW,10);
 
-    // ── Perspective grid ──
-    const spokes=14;
-    for(let i=0;i<=spokes;i++){
-      const bx=W*(i/spokes);
-      const prog=Math.abs(i-spokes/2)/(spokes/2);
-      ctx.beginPath(); ctx.moveTo(W*.5,HZ); ctx.lineTo(bx,H);
-      ctx.strokeStyle=`rgba(255,0,255,${.07+.30*prog})`; ctx.lineWidth=.8; ctx.stroke();
-    }
-    const rows=10;
-    for(let r=1;r<=rows;r++){
-      const p=r/rows;
-      const ry=HZ+(H-HZ)*(1-Math.pow(1-p,1.6));
-      const fade=.10+.55*(ry-HZ)/(H-HZ);
-      ctx.beginPath(); ctx.moveTo(0,ry); ctx.lineTo(W,ry);
-      ctx.strokeStyle=`rgba(255,0,255,${fade})`; ctx.lineWidth=.5+p*1.2; ctx.stroke();
-    }
-    // Cyan accent on nearest rows
-    for(let r=rows-2;r<=rows;r++){
-      const p=r/rows;
-      const ry=HZ+(H-HZ)*(1-Math.pow(1-p,1.6));
-      ctx.beginPath(); ctx.moveTo(0,ry); ctx.lineTo(W,ry);
-      ctx.strokeStyle=`rgba(0,255,255,${.05*(r-rows+3)})`; ctx.lineWidth=.6; ctx.stroke();
-    }
+    // ── Floor baseline ──
+    ctx.fillStyle='rgba(30,80,180,.2)'; ctx.fillRect(areaX,floor,areaW,1);
 
-    // ── Scanlines ──
-    for(let sl=0;sl<H;sl+=3){ ctx.fillStyle='rgba(0,0,0,.05)'; ctx.fillRect(0,sl,W,1); }
+    // ── Scanlines over full canvas ──
+    for(let sl=0;sl<H;sl+=3){ ctx.fillStyle='rgba(0,0,0,.07)'; ctx.fillRect(0,sl,W,1); }
 
     t++; requestAnimationFrame(draw);
   }
@@ -1041,7 +1019,7 @@ document.getElementById('corkboard-file-input').addEventListener('change',functi
 
 // Fractional hit-boxes (x0,y0,x1,y1 as 0-1 fractions of canvas) for interactive room props.
 const ROOM_OBJECTS=[
-  { id:'window', label:'Window', hint:'Click to toggle day/night', x0:.20,y0:.06,x1:.80,y1:.33,
+  { id:'window', label:'Window', hint:'Click to toggle day/night', x0:.20,y0:.06,x1:.80,y1:.27,
     onActivate(){ roomDayMode=!roomDayMode; Snd.select(); } },
   { id:'corkboard', label:'Corkboard', hint:'Click to look closer', x0:.035,y0:.07,x1:.165,y1:.30,
     onActivate(){ if(corkboardZoomTrigger) corkboardZoomTrigger(); } },
